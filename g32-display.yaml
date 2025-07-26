@@ -101,7 +101,7 @@ esphome:
 
   project:
     name: "g32hacs.display480_320"
-    version: "0.9.8"
+    version: "0.9.9"
 
 esp32:
   board: esp32-s3-devkitc-1
