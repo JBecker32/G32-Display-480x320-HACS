@@ -24,6 +24,7 @@ Diese ESPHome-Konfiguration verwandelt ein ESP32-basiertes Display in eine **int
 
 Diese Konfiguration ist für ein Display mit folgenden Komponenten optimiert:
 
+  * **Guition JC3248W553C Display Einheit**
   * **ESP32-S3-DevKitC-1**
   * **QSPI-DBI Display** (Modell: axs15231) mit 480x320 Pixeln
   * **GT911 Touchscreen**
