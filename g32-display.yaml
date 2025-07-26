@@ -1,0 +1,2547 @@
+substitutions:
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# bitte nur in diesen nächsten Zeilen Änderungen vornehmen                    #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Name des ESPHome Geräts (kann frei gewählt werden, keine Sonderzeichen)
+  name: g32-display
+  device_description: "Monitor an OW G32 grill"
+  g32_nickname: "my_g32"
+# Credentials des eigenen Wifi Netzwerks einfügen:
+#  wifi_ssid: "my_wifi_ssid"
+#  wifi_password: "my_wifi_password"
+
+# oder die Werte aus der secrets.yaml benutzen:
+  wifi_ssid: !secret wifi_ssid
+  wifi_password: !secret wifi_password
+
+
+# hier die Daten aus dem neu erstellten ESPHome Gerät einfügen. Beispiel:
+# Enable Home Assistant API
+# api:
+#   encryption:
+#     key: "OZNMBo2xusQ+BIzO1pfIQepp72VCfBzCWO/pSttPCQg="
+# den dort angezeigten key einfügen:
+  api_encryption_key: "E1fyywUUE1DWzu0OzhDkyc4yAnfGwyEfsVNvhytrU6k="
+#
+# ota:
+#   - platform: esphome
+#     password: "7fdf9f656d36180bfba92d596c9e7db3"
+# das angezeiget password einfügen:
+  ota_password: "39825aefe87449c0928189f9fb2e701a"
+#
+# wifi:
+#   ssid: !secret wifi_ssid
+#   password: !secret wifi_password
+#
+#   # Enable fallback hotspot (captive portal) in case wifi connection fails
+#   ap:
+#     ssid: "Hztht Fallback Hotspot"
+#     password: "rXlU1NZRut9K"
+# ssid: und passord: einfügen:
+  ap_ssid: "G32 Display Fallback Hotspot"
+  ap_password: "4Lytxfy25DNh"
+
+# benutzerdefinierbare Displayelemente
+# Texte festlegen für Zonen und Sensoren (max. 8 Zeichen):
+  Zone_Text:   "Zone "     # ergibt 'Zone 1', 'Zone 2' usw.
+  Sensor_Text: "Sensor "   # ergibt 'Sensor 1', 'Sensor 2' usw.
+
+# Farben für die 'Temperatur-Kreise' festlegen:
+  Zone_Arc_Color:    "0xff0000"  # 0xff0000 = Rot
+  Sensor_Arc_Color:  "0xffff00"  # 0xffff00 = Gelb
+
+# Farben für die Temperatur-Limits festlegen:
+  Limit_text_Color:  "0xaaaaaa"  # 0xaaaaaa = Grau
+#  Limit_text_Color:  "0xffb455"  # 0xffb455 = Orange
+
+# Farbe für den 'Gas-Balken' auf der 'arcs page' festlegen:
+  Gas_Bar_Color:      "0x00ff00"  # 0x00ff00 = Hellgrün
+  Gas_Bar_Low_Color:  "0xff0000"  # 0xff0000 = Rot
+# Farbe für den 'Gas-Balken' auf der 'numbers page' festlegen:
+  Gas_Bar_Color2:     "0xaaaaaa"  # 0xaaaaaa = Grau
+  Gas_Bar_Low_Color2: "0xff0000"  # 0xff0000 = Rot
+
+# SOC (in %) des Akkus festlegen, unterhalb dessen das Batteriesymbol angezeigt wird:
+  Min_SOC: "25.0"
+
+# sollen inaktive Sensoren komplett ausgeblendet werden? true = ausblenden, false = anzeigen:
+#  Hide_Inactive_Sensors: 'true' # inaktive Sensoren werden ausgeblendet
+  Hide_Inactive_Sensors: 'false' # inaktive Sensoren werden angezeigt
+
+# sollen für Zonen und Sensoren Temperaturlimits gesetzt werden können? true = Ja, false = Nein
+  Enable_Temperature_Limits: 'true'
+
+# Maximal-Temperatur für Sensoren setzen. Z.B. 130 (°C) für Kerntemperatur, 300 für Garraum:
+  Sensor1_Max: "130"
+  Sensor2_Max: "130"
+  Sensor3_Max: "130"
+  Sensor4_Max: "130"
+
+# Lautsprecher (Beeper) Lautsrtärke festlegen 1.0 = Maximum, 0.1 = sehr leise
+  Beeper_Max: "0.8"
+
+# Zeitinterval für Lautsprecher (Beeper) Alarmmeldungen festlegen Default: 5s
+  Beeper_interval: "5s"
+
+# Uhrzeit 11:32 oben in der Mitte der Statuszeile anzeigen? true = Ja, false = Nein
+  Show_Time: 'true'
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# ab hier bitte nur Änderungen vornehmen, wenn man weiß, was man tut und will #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+esphome:
+  name: ${name}
+  build_path: /tmp/esphome_build
+  platformio_options:
+    upload_speed: 921600
+    board_build.flash_mode: dio
+    board_build.f_flash: 80000000L
+    board_build.f_cpu: 240000000L
+
+  project:
+    name: "g32hacs.display480_320"
+    version: "0.9.8"
+
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
+      CONFIG_SPIRAM_FETCH_INSTRUCTIONS: y
+      CONFIG_SPIRAM_RODATA: y
+
+psram:
+  mode: octal
+  speed: 80MHz # 120mhz is not supported and falls back to 40mhz
+
+# Enable logging
+logger:
+  baud_rate: 921600
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: ${api_encryption_key}
+
+ota:
+  - platform: esphome
+    password: ${ota_password}
+
+wifi:
+  ssid: ${wifi_ssid}
+  password: ${wifi_password}
+  fast_connect: True
+  on_connect:
+    then:
+      - lvgl.widget.show: wifi_connect_label
+      - rtttl.play: 'Pling1:d=16,o=6,b=140:d6,32p,e6'
+      - globals.set:
+          id: wifi_connected
+          value: 'true'
+  on_disconnect:
+    then:
+      - lvgl.widget.hide: wifi_connect_label
+      - rtttl.play: 'siren:d=8,o=5,b=100:d,e,d,e,d,e,d,e'
+      - globals.set:
+          id: wifi_connected
+          value: 'false'
+
+# Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: ${ap_ssid}
+    password: ${ap_password}
+
+
+#-------------------------------------------
+# Display qspi
+#-------------------------------------------
+spi:
+  id: display_qspi
+  type: quad
+  clk_pin: 47
+  data_pins: [21, 48, 40, 39]
+
+display:
+  - platform: qspi_dbi
+    model: axs15231
+    data_rate: 40MHz
+    id: my_display
+    spi_id: display_qspi
+    dimensions:
+      height: 480
+      width: 320
+    cs_pin:
+      number: 45
+      ignore_strapping_warning: true
+    rotation: 90 # 90 for landscape
+    auto_clear_enabled: false
+
+#-------------------------------------------
+# Touchscreen gt911 i2c
+#-------------------------------------------
+i2c:
+  sda: 4
+  scl: 8
+  id: touchscreen_bus
+
+touchscreen:
+  - platform: axs15231
+    id: my_touch
+    display: my_display
+    i2c_id: touchscreen_bus
+    calibration:
+      x_min: 14
+      x_max: 461
+      y_min: 12
+      y_max: 310
+    transform:
+      swap_xy: true
+      mirror_x: false
+      mirror_y: true
+#    on_touch:
+#      - lambda: |-
+#          ESP_LOGI("cal", "x=%d, y=%d, x_raw=%d, y_raw=%0d",
+#            touch.x,
+#            touch.y,
+#            touch.x_raw,
+#            touch.y_raw
+#          );
+    on_release:
+      - if:
+          condition: lvgl.is_paused
+          then:
+            - logger.log: "Display is resuming"
+            - lvgl.page.show:
+                id: arcs_page
+            - lvgl.resume:
+            - lvgl.widget.redraw:
+            - light.turn_on: backlight
+
+#-------------------------------------------
+# Internal outputs
+#-------------------------------------------
+output:
+  - id: gpio_backlight_pwm
+    platform: ledc
+    pin: 1
+
+  - id: helper_low
+    platform: ledc
+    pin: 14
+
+  - platform: ledc
+    pin: 9
+    id: rtttl_out
+
+#-------------------------------------------
+# Internal lights
+#-------------------------------------------
+light:
+  - id: backlight
+    name: Backlight
+    platform: monochromatic
+    output: gpio_backlight_pwm
+    restore_mode: ALWAYS_ON
+
+#-------------------------------------------
+# Internal RTTTL speaker
+#-------------------------------------------
+rtttl:
+  id: my_rtttl
+  output: rtttl_out
+  gain: ${Beeper_Max}
+
+interval:
+  - interval: ${Beeper_interval}
+    then:
+      - lambda: |-
+          if( ((id(zone1_limit_value) > 0) && (id(zone1_value) >= id(zone1_limit_value)))
+           || ((id(zone2_limit_value) > 0) && (id(zone2_value) >= id(zone2_limit_value)))
+           || ((id(zone3_limit_value) > 0) && (id(zone3_value) >= id(zone3_limit_value)))
+           || ((id(zone4_limit_value) > 0) && (id(zone4_value) >= id(zone4_limit_value))) ) {
+            id(my_rtttl).play("siren1:d=8,o=5,b=150:d,e,d,e,d,e,d,e");
+          }
+          else if ( ((id(sensor1_limit_value) > 0) && (id(sensor1_value) >= id(sensor1_limit_value)))
+                 || ((id(sensor2_limit_value) > 0) && (id(sensor2_value) >= id(sensor2_limit_value)))
+                 || ((id(sensor3_limit_value) > 0) && (id(sensor3_value) >= id(sensor3_limit_value)))
+                 || ((id(sensor4_limit_value) > 0) && (id(sensor4_value) >= id(sensor4_limit_value))) ) {
+            id(my_rtttl).play("siren2:d=8,o=5,b=150:e,d,e,d,e,d,e,d");
+          }
+
+#-------------------------------------------
+# Global varaibles
+#-------------------------------------------
+globals:
+  - id: wifi_connected
+    type: bool
+    initial_value: 'false'
+  - id: hide_inactive_sensors
+    type: bool
+    initial_value: ${Hide_Inactive_Sensors}
+  - id: active_sensors      # bits set/reset for every active/inactive Sensor
+    type: int
+    initial_value: '0'
+
+  - id: show_time           # enables/disables time (HOUR:MINUT) display
+    type: bool
+    initial_value: ${Show_Time}
+
+  - id: zone1_value         # the value used for Zone temperature labels and arcs
+    type: int
+    initial_value: '0'
+  - id: zone2_value
+    type: int
+    initial_value: '0'
+  - id: zone3_value
+    type: int
+    initial_value: '0'
+  - id: zone4_value
+    type: int
+    initial_value: '0'
+
+  - id: sensor1_value       # the value used for Sensor temperature labels and arcs
+    type: int
+    initial_value: '0'
+  - id: sensor2_value
+    type: int
+    initial_value: '0'
+  - id: sensor3_value
+    type: int
+    initial_value: '0'
+  - id: sensor4_value
+    type: int
+    initial_value: '0'
+
+  - id: zone1_limit_value   # the value used for Zone limit labels and arcs
+    type: int
+    initial_value: '0'
+  - id: zone2_limit_value
+    type: int
+    initial_value: '0'
+  - id: zone3_limit_value
+    type: int
+    initial_value: '0'
+  - id: zone4_limit_value
+    type: int
+    initial_value: '0'
+
+  - id: sensor1_limit_value # the value used for Sensor limit labels and arcs
+    type: int
+    initial_value: '0'
+  - id: sensor2_limit_value
+    type: int
+    initial_value: '0'
+  - id: sensor3_limit_value
+    type: int
+    initial_value: '0'
+  - id: sensor4_limit_value
+    type: int
+    initial_value: '0'
+
+  - id: page_index          # parameter for page
+    type: int
+    initial_value: '0'
+  - id: sensor_index        # parameter for Zone (1-4) or Sensor (5-8)
+    type: int
+    initial_value: '0'
+  - id: sensor_limit_value  # the actual sensor limit for the indexed Zone/Sensor
+    type: int
+    initial_value: '0'
+  - id: sensor_max_value    # maximum value for Zone and Sensor values (arcs)
+    type: int
+    initial_value: '0'
+
+
+#-------------------------------------------
+# for screen timeout
+#-------------------------------------------
+number:
+  - platform: template
+    name: Screen timeout
+    optimistic: true
+    id: display_timeout
+    unit_of_measurement: "s"
+    initial_value: 300
+    restore_value: true
+    min_value: 0 # 0 means 'no timeout'
+    max_value: 3600
+    step: 5
+    mode: box
+
+#-------------------------------------------
+# SNTP Time platform
+#-------------------------------------------
+time:
+  platform: sntp
+  id: sntp_time
+  timezone: Europe/Berlin
+  servers:
+   - ntp0.ntp-servers.net
+   - ntp1.ntp-servers.net
+   - ntp2.ntp-servers.net
+  on_time_sync:
+    - script.execute: time_update
+  on_time:
+    - minutes: '*'
+      seconds: 0
+      then:
+        - script.execute: time_update
+
+#-------------------------------------------
+# LVGL library for displays
+#-------------------------------------------
+lvgl:
+  draw_rounding: 8 # necessary for the axs15231 display controller
+  displays: my_display
+  touchscreens: my_touch
+  bg_color: 0
+  border_width: 0
+  outline_width: 0
+  theme:
+    label:
+      text_color: 0xFFFFFF
+      bg_color: 0
+      bg_opa: TRANSP
+      width: 120
+      text_align: center
+    bar:
+      radius: 5
+      indicator:
+        radius: 5
+    arc:
+      radius: 5
+      arc_color: 0x333333
+      indicator:
+        radius: 5
+  style_definitions:
+    - id: arc_style
+      x: 10
+      y: 0
+      width: 100
+      height: 120
+      arc_opa: 60%
+
+      # style for zone and sensor objects with arcs
+    - id: temp_obj_style
+      width: 120
+      height: 120
+      bg_color: 0
+      text_color: 0xffffff
+      pad_all: 0
+      radius: 0
+      outline_width: 0
+      outline_color: 0
+      border_width: 0
+      border_color: 0
+      border_side: NONE
+      outline_pad: 0
+
+      # style for zone objects with numbers
+    - id: zone_obj_style
+      width: 104
+      height: 104
+      bg_color: 0x333333
+      pad_all: 0
+      outline_width: 0
+      outline_color: 0
+      border_width: 0
+      border_color: 0
+      border_side: NONE
+      outline_pad: 0
+      radius: 10
+
+      # style for sensor objects with numbers
+    - id: sensor_obj_style
+      width: 104
+      height: 104
+      bg_color: 0x333333
+      pad_all: 0
+      outline_width: 2
+      outline_color: 0xaaaaaa
+      border_width: 0
+      border_color: 0
+      border_side: NONE
+      outline_pad: 0
+      radius: 52
+
+      # style for gas
+    - id: gas_obj_style
+      width: 478
+      height: 25
+      bg_color: 0
+      text_color: 0xffffff
+      pad_all: 0
+      radius: 0
+      outline_width: 0
+      outline_color: 0
+      border_width: 0
+      border_color: 0
+      border_side: NONE
+      outline_pad: 0
+
+  # send display to idle state after timeout
+  on_idle:
+    timeout: !lambda "return(id(display_timeout).state * 1000);"
+    then:
+    - if:
+        condition:
+        - lambda: "return id(display_timeout).state > 0;"
+        then:
+          - logger.log: "Display is idle"
+          - light.turn_off: backlight
+          - lvgl.pause:
+
+  # boot screen with spinner until first data received
+  top_layer:
+    widgets:
+      - obj:
+          id: boot_screen
+          x: 0
+          y: 0
+          width: 480
+          height: 320
+          bg_color: 0
+          bg_opa: COVER
+          radius: 0
+          pad_all: 0
+          border_width: 0
+          widgets:
+            - spinner:
+                align: CENTER
+                spin_time: 1s
+                arc_length: 60deg
+                arc_width: 8
+                indicator:
+                  arc_color: 0x00ff00
+                  arc_width: 8
+
+  # pages
+  pages:
+    # main page with arcs
+    - id: arcs_page
+      pad_all: 0
+      on_swipe_left:
+        then:
+          - lambda: 'lv_indev_wait_release(lv_indev_get_act());'
+          - lvgl.page.next:
+              animation: OUT_LEFT
+              time: 600ms
+      on_swipe_right:
+        then:
+          - lambda: 'lv_indev_wait_release(lv_indev_get_act());'
+          - lvgl.page.previous:
+              animation: OUT_RIGHT
+              time: 600ms
+      widgets:
+        # one common headline for all temperature zones
+        - label:
+            x: 12
+            y: 0
+            text_font: MONTSERRAT_20
+            text_align: left
+            text: "Zonen"
+
+        # zone 1 object with Headline, Labels and Arc
+        - obj:
+            id: zone1_obj
+            x: 0
+            y: 30
+            styles: temp_obj_style
+            clickable: ${Enable_Temperature_Limits}
+            on_press:
+              - lambda: |-
+                  id(page_index) = 1;
+                  id(sensor_index) = 1;
+                  id(sensor_max_value) = 500;
+                  id(sensor_limit_value) = id(zone1_limit_value);
+                  lv_slider_set_range(sensor_limit_slider, 0, 500);
+                  lv_slider_set_value(sensor_limit_slider, id(zone1_limit_value), LV_ANIM_OFF );
+              - lvgl.label.update:
+                  id: sensor_limit_headline_label
+                  text: !lambda |-
+                    return "${Zone_Text}1 Temperaturlimit";
+              - lvgl.label.update:
+                  id: sensor_limit_label
+                  text: !lambda |-
+                    return (to_string(static_cast<int>(id(zone1_limit_value)))+"°C").c_str();
+              - lvgl.widget.redraw:
+                  id: sensor_limit_slider
+              - lvgl.page.show: sensor_limits_page
+            widgets:
+              - label:
+                  x: 0
+                  y: 74
+                  text_font: MONTSERRAT_18
+                  text: '°C'
+              - label:
+                  id: zone1_label
+                  x: 0
+                  y: 34
+                  text_font: MONTSERRAT_26
+                  text_color: !lambda |-
+                    if( (id(zone1_limit_value) == 0) || (id(zone1_value) < id(zone1_limit_value)) ) {
+                      return lv_color_hex(0xffffff);
+                      } else {
+                      return lv_color_hex(0xff0000);
+                    }
+                  text:  !lambda |-
+                    return (to_string(static_cast<int>(id(zone1_value)))).c_str();
+              - arc:
+                  id: zone1_limit_arc
+                  min_value: 1
+                  max_value: 500
+                  indicator:
+                    arc_color: ${Zone_Arc_Color}
+                  styles: arc_style
+                  value: !lambda return id(zone1_limit_value);
+              - arc:
+                  id: zone1_arc
+                  min_value: 1
+                  max_value: 500
+                  indicator:
+                    arc_color: ${Zone_Arc_Color}
+                  styles: arc_style
+                  value: !lambda return id(zone1_value);
+
+        # zone 2 object with Headline, Labels and Arc
+        - obj:
+            id: zone2_obj
+            x: 120
+            y: 30
+            styles: temp_obj_style
+            clickable: ${Enable_Temperature_Limits}
+            on_press:
+              - lambda: |-
+                  id(page_index) = 1;
+                  id(sensor_index) = 2;
+                  id(sensor_max_value) = 500;
+                  id(sensor_limit_value) = id(zone2_limit_value);
+                  lv_slider_set_range(sensor_limit_slider, 0, 500);
+                  lv_slider_set_value(sensor_limit_slider, id(zone2_limit_value), LV_ANIM_OFF );
+              - lvgl.label.update:
+                  id: sensor_limit_headline_label
+                  text: !lambda |-
+                    return "${Zone_Text}2 Temperaturlimit";
+              - lvgl.label.update:
+                  id: sensor_limit_label
+                  text: !lambda |-
+                    return (to_string(static_cast<int>(id(zone2_limit_value)))+"°C").c_str();
+              - lvgl.widget.redraw:
+                  id: sensor_limit_slider
+              - lvgl.page.show: sensor_limits_page
+            widgets:
+              - label:
+                  x: 0
+                  y: 74
+                  text_font: MONTSERRAT_18
+                  text: '°C'
+              - label:
+                  id: zone2_label
+                  x: 0
+                  y: 34
+                  text_font: MONTSERRAT_26
+                  text_color: !lambda |-
+                    if( (id(zone2_limit_value) == 0) || (id(zone2_value) < id(zone2_limit_value)) ) {
+                      return lv_color_hex(0xffffff);
+                      } else {
+                      return lv_color_hex(0xff0000);
+                    }
+                  text:  !lambda |-
+                    return (to_string(static_cast<int>(id(zone2_value)))).c_str();
+              - arc:
+                  id: zone2_limit_arc
+                  min_value: 1
+                  max_value: 500
+                  indicator:
+                    arc_color: ${Zone_Arc_Color}
+                  styles: arc_style
+                  value: !lambda return id(zone2_limit_value);
+              - arc:
+                  id: zone2_arc
+                  min_value: 1
+                  max_value: 500
+                  indicator:
+                    arc_color: ${Zone_Arc_Color}
+                  styles: arc_style
+                  value: !lambda return id(zone2_value);
+
+        # zone 3 object with Headline, Labels and Arc
+        - obj:
+            id: zone3_obj
+            x: 240
+            y: 30
+            styles: temp_obj_style
+            clickable: ${Enable_Temperature_Limits}
+            on_press:
+              - lambda: |-
+                  id(page_index) = 1;
+                  id(sensor_index) = 3;
+                  id(sensor_max_value) = 500;
+                  id(sensor_limit_value) = id(zone3_limit_value);
+                  lv_slider_set_range(sensor_limit_slider, 0, 500);
+                  lv_slider_set_value(sensor_limit_slider, id(zone3_limit_value), LV_ANIM_OFF );
+              - lvgl.label.update:
+                  id: sensor_limit_headline_label
+                  text: !lambda |-
+                    return "${Zone_Text}3 Temperaturlimit";
+              - lvgl.label.update:
+                  id: sensor_limit_label
+                  text: !lambda |-
+                    return (to_string(static_cast<int>(id(zone3_limit_value)))+"°C").c_str();
+              - lvgl.widget.redraw:
+                  id: sensor_limit_slider
+              - lvgl.page.show: sensor_limits_page
+            widgets:
+              - label:
+                  x: 0
+                  y: 74
+                  text_font: MONTSERRAT_18
+                  text: '°C'
+              - label:
+                  id: zone3_label
+                  x: 0
+                  y: 34
+                  text_font: MONTSERRAT_26
+                  text_color: !lambda |-
+                    if( (id(zone3_limit_value) == 0) || (id(zone3_value) < id(zone3_limit_value)) ) {
+                      return lv_color_hex(0xffffff);
+                      } else {
+                      return lv_color_hex(0xff0000);
+                    }
+                  text:  !lambda |-
+                    return (to_string(static_cast<int>(id(zone3_value)))).c_str();
+              - arc:
+                  id: zone3_limit_arc
+                  min_value: 1
+                  max_value: 500
+                  indicator:
+                    arc_color: ${Zone_Arc_Color}
+                  styles: arc_style
+                  value: !lambda return id(zone3_limit_value);
+              - arc:
+                  id: zone3_arc
+                  min_value: 1
+                  max_value: 500
+                  indicator:
+                    arc_color: ${Zone_Arc_Color}
+                  styles: arc_style
+                  value: !lambda return id(zone3_value);
+
+        # zone 4 object with Headline, Labels and Arc
+        - obj:
+            id: zone4_obj
+            x: 360
+            y: 30
+            styles: temp_obj_style
+            clickable: ${Enable_Temperature_Limits}
+            on_press:
+              - lambda: |-
+                  id(page_index) = 1;
+                  id(sensor_index) = 4;
+                  id(sensor_max_value) = 500;
+                  id(sensor_limit_value) = id(zone4_limit_value);
+                  lv_slider_set_range(sensor_limit_slider, 0, 500);
+                  lv_slider_set_value(sensor_limit_slider, id(zone4_limit_value), LV_ANIM_OFF );
+              - lvgl.label.update:
+                  id: sensor_limit_headline_label
+                  text: !lambda |-
+                    return "${Zone_Text}4 Temperaturlimit";
+              - lvgl.label.update:
+                  id: sensor_limit_label
+                  text: !lambda |-
+                    return (to_string(static_cast<int>(id(zone4_limit_value)))+"°C").c_str();
+              - lvgl.widget.redraw:
+                  id: sensor_limit_slider
+              - lvgl.page.show: sensor_limits_page
+            widgets:
+              - label:
+                  x: 0
+                  y: 74
+                  text_font: MONTSERRAT_18
+                  text: '°C'
+              - label:
+                  id: zone4_label
+                  x: 0
+                  y: 34
+                  text_font: MONTSERRAT_26
+                  text_color: !lambda |-
+                    if( (id(zone4_limit_value) == 0) || (id(zone4_value) < id(zone4_limit_value)) ) {
+                      return lv_color_hex(0xffffff);
+                      } else {
+                      return lv_color_hex(0xff0000);
+                    }
+                  text:  !lambda |-
+                    return (to_string(static_cast<int>(id(zone1_value)))).c_str();
+              - arc:
+                  id: zone4_limit_arc
+                  min_value: 1
+                  max_value: 500
+                  indicator:
+                    arc_color: ${Zone_Arc_Color}
+                  styles: arc_style
+                  value: !lambda return id(zone4_limit_value);
+              - arc:
+                  id: zone4_arc
+                  min_value: 1
+                  max_value: 500
+                  indicator:
+                    arc_color: ${Zone_Arc_Color}
+                  styles: arc_style
+                  value: !lambda return id(zone4_value);
+
+        # one common headline for all sensors
+        - label:
+            id: sensors_headline
+            x: 12
+            y: 140
+            width: 460
+            text_font: MONTSERRAT_20
+            text_align: left
+            text: "Temperatursensoren"
+            hidden: !lambda return (id(active_sensors) == 0);
+
+        # sensor 1 object with Headline, Labels and Arc
+        - obj:
+            id: sensor1_obj
+            x: 0
+            y: 176
+            styles: temp_obj_style
+            radius: 50
+            clickable: ${Enable_Temperature_Limits}
+            hidden: !lambda |-
+              if( (id(sensor1_value) < 1500) || (id(sensor1_limit_value) > 0) || (id(hide_inactive_sensors) == false) ) {
+                id(active_sensors) |= 0x01;
+                return false;
+              } else {
+                id(active_sensors) &= ~0x01;
+                return true;
+              }
+            on_press:
+              - lambda: |-
+                  id(page_index) = 1;
+                  id(sensor_index) = 5;
+                  id(sensor_max_value) = ${Sensor1_Max};
+                  id(sensor_limit_value) = id(sensor1_limit_value);
+                  lv_slider_set_range(sensor_limit_slider, 0, ${Sensor1_Max});
+                  lv_slider_set_value(sensor_limit_slider, id(sensor1_limit_value), LV_ANIM_OFF );
+              - lvgl.label.update:
+                  id: sensor_limit_headline_label
+                  text: !lambda |-
+                    return "${Sensor_Text}1 Temperaturlimit";
+              - lvgl.label.update:
+                  id: sensor_limit_label
+                  text: !lambda |-
+                    return (to_string(static_cast<int>(id(sensor1_limit_value)))+"°C").c_str();
+              - lvgl.widget.redraw:
+                  id: sensor_limit_slider
+              - lvgl.page.show: sensor_limits_page
+            widgets:
+              - label:
+                  x: 0
+                  y: 74
+                  text_font: MONTSERRAT_18
+                  text: '°C'
+              - label:
+                  id: sensor1_label
+                  x: 0
+                  y: 34
+                  text_font: MONTSERRAT_26
+                  text: !lambda |-
+                    if( id(sensor1_value) < 1500) {return (to_string(static_cast<int>(id(sensor1_value)))).c_str();
+                    } else {
+                      return ("---");
+                    };
+                  text_color: !lambda |-
+                    if( (id(sensor1_limit_value) == 0) || (id(sensor1_value) < id(sensor1_limit_value) && id(sensor1_value) < 1500) ) {
+                      return lv_color_hex(0xffffff); // White
+                    } else {
+                      return lv_color_hex(0xff0000); // Red
+                    }
+              - arc:
+                  id: sensor1_limit_arc
+                  min_value: 1
+                  max_value: ${Sensor1_Max}
+                  indicator:
+                    arc_color: ${Sensor_Arc_Color}
+                  styles: arc_style
+                  value: !lambda return id(sensor1_limit_value);
+              - arc:
+                  id: sensor1_arc
+                  min_value: 1
+                  max_value: ${Sensor1_Max}
+                  indicator:
+                    arc_color: ${Sensor_Arc_Color}
+                  styles: arc_style
+                  value: !lambda |-
+                    if( id(sensor1_value) < 1500) {return (id(sensor1_value));
+                    } else {
+                      return (0);
+                    }
+
+        # sensor 2 object with Headline, Labels and Arc
+        - obj:
+            id: sensor2_obj
+            x: 120
+            y: 176
+            styles: temp_obj_style
+            clickable: ${Enable_Temperature_Limits}
+            hidden: !lambda |-
+              if( (id(sensor2_value) < 1500) || (id(sensor2_limit_value) > 0) || (id(hide_inactive_sensors) == false) ) {
+                id(active_sensors) |= 0x02;
+                return false;
+              } else {
+                id(active_sensors) &= ~0x02;
+                return true;
+              }
+            on_press:
+              - lambda: |-
+                  id(page_index) = 1;
+                  id(sensor_index) = 6;
+                  id(sensor_max_value) = ${Sensor2_Max};
+                  id(sensor_limit_value) = id(sensor2_limit_value);
+                  lv_slider_set_range(sensor_limit_slider, 0, ${Sensor2_Max});
+                  lv_slider_set_value(sensor_limit_slider, id(sensor2_limit_value), LV_ANIM_OFF );
+              - lvgl.label.update:
+                  id: sensor_limit_headline_label
+                  text: !lambda |-
+                    return "${Sensor_Text}2 Temperaturlimit";
+              - lvgl.label.update:
+                  id: sensor_limit_label
+                  text: !lambda |-
+                    return (to_string(static_cast<int>(id(sensor2_limit_value)))+"°C").c_str();
+              - lvgl.widget.redraw:
+                  id: sensor_limit_slider
+              - lvgl.page.show: sensor_limits_page
+            widgets:
+              - label:
+                  x: 0
+                  y: 74
+                  text_font: MONTSERRAT_18
+                  text: '°C'
+              - label:
+                  id: sensor2_label
+                  x: 0
+                  y: 34
+                  text_font: MONTSERRAT_26
+                  text: !lambda |-
+                    if( id(sensor2_value) < 1500) {return (to_string(static_cast<int>(id(sensor2_value)))).c_str();
+                    } else {
+                      return ("---");
+                    };
+                  text_color: !lambda |-
+                    if( (id(sensor2_limit_value) == 0) || (id(sensor2_value) < id(sensor2_limit_value) && id(sensor2_value) < 1500) ) {
+                      return lv_color_hex(0xffffff); // White
+                    } else {
+                      return lv_color_hex(0xff0000); // Red
+                    }
+              - arc:
+                  id: sensor2_limit_arc
+                  min_value: 1
+                  max_value: ${Sensor2_Max}
+                  indicator:
+                    arc_color: ${Sensor_Arc_Color}
+                  styles: arc_style
+                  value: !lambda return id(sensor2_limit_value);
+              - arc:
+                  id: sensor2_arc
+                  min_value: 1
+                  max_value: ${Sensor2_Max}
+                  indicator:
+                    arc_color: ${Sensor_Arc_Color}
+                  styles: arc_style
+                  value: !lambda |-
+                    if( id(sensor2_value) < 1500) {return (id(sensor2_value));
+                    } else {
+                      return (0);
+                    }
+
+        # sensor 3 object with Headline, Labels and Arc
+        - obj:
+            id: sensor3_obj
+            x: 240
+            y: 176
+            styles: temp_obj_style
+            clickable: ${Enable_Temperature_Limits}
+            hidden: !lambda |-
+              if( (id(sensor3_value) < 1500) || (id(sensor3_limit_value) > 0) || (id(hide_inactive_sensors) == false) ) {
+                id(active_sensors) |= 0x04;
+                return false;
+              } else {
+                id(active_sensors) &= ~0x04;
+                return true;
+              }
+            on_press:
+              - lambda: |-
+                  id(page_index) = 1;
+                  id(sensor_index) = 7;
+                  id(sensor_max_value) = ${Sensor3_Max};
+                  id(sensor_limit_value) = id(sensor3_limit_value);
+                  lv_slider_set_range(sensor_limit_slider, 0, ${Sensor3_Max});
+                  lv_slider_set_value(sensor_limit_slider, id(sensor3_limit_value), LV_ANIM_OFF );
+              - lvgl.label.update:
+                  id: sensor_limit_headline_label
+                  text: !lambda |-
+                    return "${Sensor_Text}3 Temperaturlimit";
+              - lvgl.label.update:
+                  id: sensor_limit_label
+                  text: !lambda |-
+                    return (to_string(static_cast<int>(id(sensor3_limit_value)))+"°C").c_str();
+              - lvgl.widget.redraw:
+                  id: sensor_limit_slider
+              - lvgl.page.show: sensor_limits_page
+            widgets:
+              - label:
+                  x: 0
+                  y: 74
+                  text_font: MONTSERRAT_18
+                  text: '°C'
+              - label:
+                  id: sensor3_label
+                  x: 0
+                  y: 34
+                  text_font: MONTSERRAT_26
+                  text: !lambda |-
+                    if( id(sensor3_value) < 1500) {return (to_string(static_cast<int>(id(sensor3_value)))).c_str();
+                    } else {
+                      return ("---");
+                    };
+                  text_color: !lambda |-
+                    if( (id(sensor3_limit_value) == 0) || (id(sensor3_value) < id(sensor3_limit_value) && id(sensor3_value) < 1500) ) {
+                      return lv_color_hex(0xffffff); // White
+                    } else {
+                      return lv_color_hex(0xff0000); // Red
+                    }
+              - arc:
+                  id: sensor3_limit_arc
+                  min_value: 1
+                  max_value: ${Sensor3_Max}
+                  indicator:
+                    arc_color: ${Sensor_Arc_Color}
+                  styles: arc_style
+                  value: !lambda return id(sensor3_limit_value);
+              - arc:
+                  id: sensor3_arc
+                  min_value: 1
+                  max_value: ${Sensor3_Max}
+                  indicator:
+                    arc_color: ${Sensor_Arc_Color}
+                  styles: arc_style
+                  value: !lambda |-
+                    if( id(sensor3_value) < 1500) {return (id(sensor3_value));
+                    } else {
+                      return (0);
+                    }
+
+        # sensor 4 object with Headline, Labels and Arc
+        - obj:
+            id: sensor4_obj
+            x: 360
+            y: 176
+            styles: temp_obj_style
+            clickable: ${Enable_Temperature_Limits}
+            hidden: !lambda |-
+              if( (id(sensor4_value) < 1500) || (id(sensor4_limit_value) > 0) || (id(hide_inactive_sensors) == false) ) {
+                id(active_sensors) |= 0x08;
+                return false;
+              } else {
+                id(active_sensors) &= ~0x08;
+                return true;
+              }
+            on_press:
+              - lambda: |-
+                  id(page_index) = 1;
+                  id(sensor_index) = 8;
+                  id(sensor_max_value) = ${Sensor4_Max};
+                  id(sensor_limit_value) = id(sensor4_limit_value);
+                  lv_slider_set_range(sensor_limit_slider, 0, ${Sensor4_Max});
+                  lv_slider_set_value(sensor_limit_slider, id(sensor4_limit_value), LV_ANIM_OFF );
+              - lvgl.label.update:
+                  id: sensor_limit_headline_label
+                  text: !lambda |-
+                    return "${Sensor_Text}3 Temperaturlimit";
+              - lvgl.label.update:
+                  id: sensor_limit_label
+                  text: !lambda |-
+                    return (to_string(static_cast<int>(id(sensor3_limit_value)))+"°C").c_str();
+              - lvgl.widget.redraw:
+                  id: sensor_limit_slider
+              - lvgl.page.show: sensor_limits_page
+            widgets:
+              - label:
+                  x: 0
+                  y: 74
+                  text_font: MONTSERRAT_18
+                  text: '°C'
+              - label:
+                  id: sensor4_label
+                  x: 0
+                  y: 34
+                  text_font: MONTSERRAT_26
+                  text: !lambda |-
+                    if( id(sensor4_value) < 1500) {return (to_string(static_cast<int>(id(sensor4_value)))).c_str();
+                    } else {
+                      return ("---");
+                    };
+                  text_color: !lambda |-
+                    if( (id(sensor4_limit_value) == 0) || (id(sensor4_value) < id(sensor4_limit_value) && id(sensor4_value) < 1500) ) {
+                      return lv_color_hex(0xffffff); // White
+                    } else {
+                      return lv_color_hex(0xff0000); // Red
+                    }
+              - arc:
+                  id: sensor4_limit_arc
+                  min_value: 1
+                  max_value: ${Sensor4_Max}
+                  indicator:
+                    arc_color: ${Sensor_Arc_Color}
+                  styles: arc_style
+                  value: !lambda return id(sensor4_limit_value);
+              - arc:
+                  id: sensor4_arc
+                  min_value: 1
+                  max_value: ${Sensor4_Max}
+                  indicator:
+                    arc_color: ${Sensor_Arc_Color}
+                  styles: arc_style
+                  value: !lambda |-
+                    if( id(sensor4_value) < 1500) {return (id(sensor4_value));
+                    } else {
+                      return (0);
+                    }
+
+        # gas object with gas values in % and g
+        - obj:
+            id: gas_obj
+            x: 0
+            y: 294
+            styles: gas_obj_style
+            widgets:
+              - label:
+                  x: 24
+                  y: 0
+                  text_font: MONTSERRAT_18
+                  text_align: LEFT
+                  text: 'Gas:'
+              - label:
+                  id: gas_percent_label
+                  x: 260
+                  y: 0
+                  text_font: MONTSERRAT_18
+                  text: '-- %'
+              - label:
+                  id: gas_weight_label
+                  x: 358
+                  y: 0
+                  text_font: MONTSERRAT_18
+                  text: '--- g'
+              - bar:
+                  id: gas_percent_bar
+                  x: 80
+                  y: 5
+                  height: 12
+                  width: 200
+                  radius: 5
+                  min_value: 1
+                  max_value: 100
+                  bg_color: 0xffffff
+                  indicator:
+                    bg_color: ${Gas_Bar_Color}
+                  value: 0
+
+        # symbol for successfull WIFI connection
+        - label:
+            id: wifi_connect_label
+            x: 430
+            y: 4
+            text_font: MONTSERRAT_18
+            text_color: 0x00ff00
+            text_align: CENTER
+            width: 40
+            text: "\uF1EB" # WIFI symbol
+            hidden: true
+
+        # symbol for battery low warning
+        - label:
+            id: battery_empty_label
+            x: 390
+            y: 4
+            text_font: MONTSERRAT_18
+            text_color: 0xff0000
+            text_align: CENTER
+            width: 40
+            text: "\uF243" # 25% battery label
+            hidden: true
+
+        # symbol for 'light on'
+        - label:
+            id: light_on_label
+            x: 350
+            y: 4
+            text_font: MONTSERRAT_18
+            text_color: 0xffff00
+            text_align: CENTER
+            width: 40
+            text: "\uF0E7" # lightning
+            hidden: true
+
+        # symbol for 'firebox open'
+        - label:
+            id: firebox_open_label
+            x: 310
+            y: 4
+            text_font: MONTSERRAT_18
+            text_color: 0x00ff00
+            text_align: CENTER
+            width: 40
+            text: "\uF093" # arrow up
+            hidden: true
+
+        # symbol for gas low warning
+        - label:
+            id: g32_warning_label
+            x: 270
+            y: 4
+            text_font: MONTSERRAT_18
+            text_color: 0xff0000
+            text_align: CENTER
+            width: 40
+            text: "\uF071" # invertiertes Ausrufungszeichen
+            hidden: true
+
+          # time string hours:minutes
+        - label:
+            id: display_time
+            x: 200
+            y: 4
+            text_font: MONTSERRAT_20
+            text_color: 0xffffff
+            text_align: CENTER
+            width: 80
+            text: "00:00"
+            hidden: true
+
+    # main page with numbers
+    - id: numbers_page
+      pad_all: 0
+      on_swipe_left:
+        then:
+          - lambda: 'lv_indev_wait_release(lv_indev_get_act());'
+          - lvgl.page.next:
+              animation: OUT_LEFT
+              time: 600ms
+      on_swipe_right:
+        then:
+          - lambda: 'lv_indev_wait_release(lv_indev_get_act());'
+          - lvgl.page.previous:
+              animation: OUT_RIGHT
+              time: 600ms
+      widgets:
+        # one common headline for all zones
+        - label:
+            x: 12
+            y: 0
+            text_font: MONTSERRAT_20
+            text_align: left
+            text: "Zonen"
+
+        # zone 1 object with Labels and line
+        - obj:
+            id: zone1_obj2
+            x: 6
+            y: 28
+            styles: zone_obj_style
+            clickable: ${Enable_Temperature_Limits}
+            on_click:
+              - lambda: |-
+                  id(page_index) = 2;
+                  id(sensor_index) = 1;
+                  id(sensor_max_value) = 500;
+                  id(sensor_limit_value) = id(zone1_limit_value);
+                  lv_slider_set_range(sensor_limit_slider, 0, 500);
+                  lv_slider_set_value(sensor_limit_slider, id(zone1_limit_value), LV_ANIM_OFF );
+              - lvgl.label.update:
+                  id: sensor_limit_headline_label
+                  text: !lambda |-
+                    return "${Zone_Text}1 Temperaturlimit";
+              - lvgl.label.update:
+                  id: sensor_limit_label
+                  text: !lambda |-
+                    return (to_string(static_cast<int>(id(zone1_limit_value)))+"°C").c_str();
+              - lvgl.widget.redraw:
+                  id: sensor_limit_slider
+              - lvgl.page.show: sensor_limits_page
+            widgets:
+              - line:
+                  points:
+                    - 8, 52
+                    - 74, 52
+                  line_width: 3
+                  line_color: 0x888888
+                  line_rounded: true
+              - label:
+                  x: 78
+                  y: 42
+                  width: 24
+                  text_font: MONTSERRAT_18
+                  text_color: 0x888888
+                  text: '°C'
+              - label:
+                  id: zone1_label2
+                  x: 0
+                  y: 6
+                  width: 100
+                  text_font: MONTSERRAT_34
+                  text_color: !lambda |-
+                    if( (id(zone1_limit_value) == 0) || (id(zone1_value) < id(zone1_limit_value)) ) {
+                    return lv_color_hex(${Limit_text_Color}); // user-defined color
+                      } else {
+                      return lv_color_hex(0xff0000); // red
+                    }
+                  text:  !lambda |-
+                    return (to_string(static_cast<int>(id(zone1_value)))).c_str();
+              - label:
+                  id: zone1_limit_label2
+                  x: 0
+                  y: 60
+                  width: 100
+                  text_font: MONTSERRAT_24
+                  text_color: ${Limit_text_Color}
+                  text: !lambda |-
+                    if( id(zone1_limit_value) > 0 ){
+                      return (to_string(static_cast<int>(id(zone1_limit_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+
+        # zone 2 object with Labels and line
+        - obj:
+            id: zone2_obj2
+            x: 126
+            y: 28
+            styles: zone_obj_style
+            clickable: ${Enable_Temperature_Limits}
+            on_click:
+              - lambda: |-
+                  id(page_index) = 2;
+                  id(sensor_index) = 2;
+                  id(sensor_max_value) = 500;
+                  id(sensor_limit_value) = id(zone2_limit_value);
+                  lv_slider_set_range(sensor_limit_slider, 0, 500);
+                  lv_slider_set_value(sensor_limit_slider, id(zone2_limit_value), LV_ANIM_OFF );
+              - lvgl.label.update:
+                  id: sensor_limit_headline_label
+                  text: !lambda |-
+                    return "${Zone_Text}2 Temperaturlimit";
+              - lvgl.label.update:
+                  id: sensor_limit_label
+                  text: !lambda |-
+                    return (to_string(static_cast<int>(id(zone2_limit_value)))+"°C").c_str();
+              - lvgl.widget.redraw:
+                  id: sensor_limit_slider
+              - lvgl.page.show: sensor_limits_page
+            widgets:
+              - line:
+                  points:
+                    - 8, 52
+                    - 74, 52
+                  line_width: 3
+                  line_color: 0x888888
+                  line_rounded: true
+              - label:
+                  x: 78
+                  y: 42
+                  width: 24
+                  text_font: MONTSERRAT_18
+                  text_color: 0x888888
+                  text: '°C'
+              - label:
+                  id: zone2_label2
+                  x: 0
+                  y: 6
+                  width: 100
+                  text_font: MONTSERRAT_34
+                  text_color: !lambda |-
+                    if( (id(zone2_limit_value) == 0) || (id(zone2_value) < id(zone2_limit_value)) ) {
+                      return lv_color_hex(${Limit_text_Color}); // user-defined color
+                      } else {
+                      return lv_color_hex(0xff0000); // red
+                    }
+                  text:  !lambda |-
+                    return (to_string(static_cast<int>(id(zone2_value)))).c_str();
+              - label:
+                  id: zone2_limit_label2
+                  x: 0
+                  y: 60
+                  width: 100
+                  text_font: MONTSERRAT_24
+                  text_color: ${Limit_text_Color}
+                  text: !lambda |-
+                    if( id(zone2_limit_value) > 0 ){
+                      return (to_string(static_cast<int>(id(zone2_limit_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+
+        # zone 3 object with Labels and line
+        - obj:
+            id: zone3_obj2
+            x: 246
+            y: 28
+            styles: zone_obj_style
+            clickable: ${Enable_Temperature_Limits}
+            on_click:
+              - lambda: |-
+                  id(page_index) = 2;
+                  id(sensor_index) = 3;
+                  id(sensor_max_value) = 500;
+                  id(sensor_limit_value) = id(zone3_limit_value);
+                  lv_slider_set_range(sensor_limit_slider, 0, 500);
+                  lv_slider_set_value(sensor_limit_slider, id(zone3_limit_value), LV_ANIM_OFF );
+              - lvgl.label.update:
+                  id: sensor_limit_headline_label
+                  text: !lambda |-
+                    return "${Zone_Text}3 Temperaturlimit";
+              - lvgl.label.update:
+                  id: sensor_limit_label
+                  text: !lambda |-
+                    return (to_string(static_cast<int>(id(zone3_limit_value)))+"°C").c_str();
+              - lvgl.widget.redraw:
+                  id: sensor_limit_slider
+              - lvgl.page.show: sensor_limits_page
+            widgets:
+              - line:
+                  points:
+                    - 8, 52
+                    - 74, 52
+                  line_width: 3
+                  line_color: 0x888888
+                  line_rounded: true
+              - label:
+                  x: 78
+                  y: 42
+                  width: 24
+                  text_font: MONTSERRAT_18
+                  text_color: 0x888888
+                  text: '°C'
+              - label:
+                  id: zone3_label2
+                  x: 0
+                  y: 6
+                  width: 100
+                  text_font: MONTSERRAT_34
+                  text_color: !lambda |-
+                    if( (id(zone3_limit_value) == 0) || (id(zone3_value) < id(zone3_limit_value)) ) {
+                      return lv_color_hex(${Limit_text_Color}); // user-defined color
+                      } else {
+                      return lv_color_hex(0xff0000); // red
+                    }
+                  text:  !lambda |-
+                    return (to_string(static_cast<int>(id(zone3_value)))).c_str();
+              - label:
+                  id: zone3_limit_label2
+                  x: 0
+                  y: 60
+                  width: 100
+                  text_font: MONTSERRAT_24
+                  text_color: ${Limit_text_Color}
+                  text: !lambda |-
+                    if( id(zone3_limit_value) > 0 ){
+                      return (to_string(static_cast<int>(id(zone3_limit_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+
+        # zone 4 object with Labels and line
+        - obj:
+            id: zone4_obj2
+            x: 366
+            y: 28
+            styles: zone_obj_style
+            clickable: ${Enable_Temperature_Limits}
+            on_click:
+              - lambda: |-
+                  id(page_index) = 2;
+                  id(sensor_index) = 4;
+                  id(sensor_max_value) = 500;
+                  id(sensor_limit_value) = id(zone4_limit_value);
+                  lv_slider_set_range(sensor_limit_slider, 0, 500);
+                  lv_slider_set_value(sensor_limit_slider, id(zone4_limit_value), LV_ANIM_OFF );
+              - lvgl.label.update:
+                  id: sensor_limit_headline_label
+                  text: !lambda |-
+                    return "${Zone_Text}4 Temperaturlimit";
+              - lvgl.label.update:
+                  id: sensor_limit_label
+                  text: !lambda |-
+                    return (to_string(static_cast<int>(id(zone4_limit_value)))+"°C").c_str();
+              - lvgl.widget.redraw:
+                  id: sensor_limit_slider
+              - lvgl.page.show: sensor_limits_page
+            widgets:
+              - line:
+                  points:
+                    - 8, 52
+                    - 74, 52
+                  line_width: 3
+                  line_color: 0x888888
+                  line_rounded: true
+              - label:
+                  x: 78
+                  y: 42
+                  width: 24
+                  text_font: MONTSERRAT_18
+                  text_color: 0x888888
+                  text: '°C'
+              - label:
+                  id: zone4_label2
+                  x: 0
+                  y: 6
+                  width: 100
+                  text_font: MONTSERRAT_34
+                  text_color: !lambda |-
+                    if( (id(zone4_limit_value) == 0) || (id(zone4_value) < id(zone4_limit_value)) ) {
+                      return lv_color_hex(${Limit_text_Color}); // user-defined color
+                      } else {
+                      return lv_color_hex(0xff0000); // red
+                    }
+                  text:  !lambda |-
+                    return (to_string(static_cast<int>(id(zone4_value)))).c_str();
+              - label:
+                  id: zone4_limit_label2
+                  x: 0
+                  y: 60
+                  width: 100
+                  text_font: MONTSERRAT_24
+                  text_color: ${Limit_text_Color}
+                  text: !lambda |-
+                    if( id(zone4_limit_value) > 0 ){
+                      return (to_string(static_cast<int>(id(zone4_limit_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+
+        # one common headline for all sensors
+        - label:
+            id: sensors_headline2
+            x: 12
+            y: 140
+            width: 460
+            text_font: MONTSERRAT_20
+            text_align: left
+            text: "Temperatursensoren"
+            hidden: !lambda |-
+              if( id(active_sensors) == 0 ) {
+                return true;
+              } else {
+                return false;
+              }
+
+        # grey rectangle which combines the sensor objects
+        - obj:
+            id: sensors_obj2
+            x: 6
+            y: 168
+            width: 464
+            height: 112
+            bg_color: 0x333333
+            pad_all: 0
+            outline_width: 0
+            outline_color: 0
+            border_width: 0
+            border_color: 0
+            border_side: NONE
+            outline_pad: 0
+            radius: 10
+            hidden: !lambda |-
+              if( id(active_sensors) == 0 ) {
+                return true;
+              } else {
+                return false;
+              }
+
+        # sensor 1 object with Labels and line
+        - obj:
+            id: sensor1_obj2
+            x: 10
+            y: 172
+            styles: sensor_obj_style
+            clickable: ${Enable_Temperature_Limits}
+            hidden: !lambda |-
+              if( (id(sensor1_value) < 1500) || (id(sensor1_limit_value) > 0) || (id(hide_inactive_sensors) == false) ) {
+                id(active_sensors) |= 0x01;
+                return false;
+              } else {
+                id(active_sensors) &= ~0x01;
+                return true;
+              }
+            on_click:
+              - lambda: |-
+                  id(page_index) = 2;
+                  id(sensor_index) = 5;
+                  id(sensor_max_value) = ${Sensor1_Max};
+                  id(sensor_limit_value) = id(sensor1_limit_value);
+                  lv_slider_set_range(sensor_limit_slider, 0, ${Sensor1_Max});
+                  lv_slider_set_value(sensor_limit_slider, id(sensor1_limit_value), LV_ANIM_OFF );
+              - lvgl.label.update:
+                  id: sensor_limit_headline_label
+                  text: !lambda |-
+                    return "${Sensor_Text}1 Temperaturlimit";
+              - lvgl.label.update:
+                  id: sensor_limit_label
+                  text: !lambda |-
+                    return (to_string(static_cast<int>(id(sensor1_limit_value)))+"°C").c_str();
+              - lvgl.widget.redraw:
+                  id: sensor_limit_slider
+              - lvgl.page.show: sensor_limits_page
+            widgets:
+              - line:
+                  points:
+                    - 8, 52
+                    - 74, 52
+                  line_width: 3
+                  line_color: 0x888888
+                  line_rounded: true
+              - label:
+                  x: 78
+                  y: 42
+                  width: 24
+                  text_font: MONTSERRAT_18
+                  text_color: 0x888888
+                  text: '°C'
+              - label:
+                  id: sensor1_label2
+                  x: 0
+                  y: 6
+                  width: 100
+                  text_font: MONTSERRAT_34
+                  text: !lambda |-
+                    if( (id(sensor1_value) < 1500) && (id(sensor1_value) > 0) ) {
+                      return (to_string(static_cast<int>(id(sensor1_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+                  text_color: !lambda |-
+                    if( (id(sensor1_limit_value) == 0) || (id(sensor1_value) < id(sensor1_limit_value) && id(sensor1_value) < 1500) ) {
+                      return lv_color_hex(${Limit_text_Color}); // user-defined color
+                    } else {
+                      return lv_color_hex(0xff0000); // Red
+                    }
+              - label:
+                  id: sensor1_limit_label2
+                  x: 0
+                  y: 60
+                  width: 100
+                  text_font: MONTSERRAT_24
+                  text_color: ${Limit_text_Color}
+                  text: !lambda |-
+                    if( id(sensor1_limit_value) > 0 ){
+                      return (to_string(static_cast<int>(id(sensor1_limit_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+
+        # sensor 2 object with Labels and line
+        - obj:
+            id: sensor2_obj2
+            x: 128
+            y: 172
+            styles: sensor_obj_style
+            clickable: true
+            hidden: !lambda |-
+              if( (id(sensor2_value) < 1500) || (id(sensor2_limit_value) > 0) || (id(hide_inactive_sensors) == false) ) {
+                id(active_sensors) |= 0x02;
+                return false;
+              } else {
+                id(active_sensors) &= ~0x02;
+                return true;
+              }
+            on_click:
+              - lambda: |-
+                  id(page_index) = 2;
+                  id(sensor_index) = 6;
+                  id(sensor_max_value) = ${Sensor2_Max};
+                  id(sensor_limit_value) = id(sensor2_limit_value);
+                  lv_slider_set_range(sensor_limit_slider, 0, ${Sensor2_Max});
+                  lv_slider_set_value(sensor_limit_slider, id(sensor2_limit_value), LV_ANIM_OFF );
+              - lvgl.label.update:
+                  id: sensor_limit_headline_label
+                  text: !lambda |-
+                    return "${Sensor_Text}2 Temperaturlimit";
+              - lvgl.label.update:
+                  id: sensor_limit_label
+                  text: !lambda |-
+                    return (to_string(static_cast<int>(id(sensor2_limit_value)))+"°C").c_str();
+              - lvgl.widget.redraw:
+                  id: sensor_limit_slider
+              - lvgl.page.show: sensor_limits_page
+            widgets:
+              - line:
+                  points:
+                    - 8, 52
+                    - 74, 52
+                  line_width: 3
+                  line_color: 0x888888
+                  line_rounded: true
+              - label:
+                  x: 78
+                  y: 42
+                  width: 24
+                  text_font: MONTSERRAT_18
+                  text_color: 0x888888
+                  text: '°C'
+              - label:
+                  id: sensor2_label2
+                  x: 0
+                  y: 6
+                  width: 100
+                  text_font: MONTSERRAT_34
+                  text: !lambda |-
+                    if( (id(sensor2_value) < 1500) && (id(sensor2_value) > 0) ) {
+                      return (to_string(static_cast<int>(id(sensor2_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+                  text_color: !lambda |-
+                    if( (id(sensor2_limit_value) == 0) || (id(sensor2_value) < id(sensor2_limit_value) && id(sensor2_value) < 1500) ) {
+                      return lv_color_hex(${Limit_text_Color}); // user-defined color
+                    } else {
+                      return lv_color_hex(0xff0000); // Red
+                    }
+              - label:
+                  id: sensor2_limit_label2
+                  x: 0
+                  y: 60
+                  width: 100
+                  text_font: MONTSERRAT_24
+                  text_color: ${Limit_text_Color}
+                  text: !lambda |-
+                    if( id(sensor2_limit_value) > 0 ){
+                      return (to_string(static_cast<int>(id(sensor2_limit_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+
+        # sensor 3 object with Labels and line
+        - obj:
+            id: sensor3_obj2
+            x: 244
+            y: 172
+            styles: sensor_obj_style
+            clickable: true
+            hidden: !lambda |-
+              if( (id(sensor3_value) < 1500) || (id(sensor3_limit_value) > 0) || (id(hide_inactive_sensors) == false) ) {
+                id(active_sensors) |= 0x04;
+                return false;
+              } else {
+                id(active_sensors) &= ~0x04;
+                return true;
+              }
+            on_click:
+              - lambda: |-
+                  id(page_index) = 2;
+                  id(sensor_index) = 7;
+                  id(sensor_max_value) = ${Sensor3_Max};
+                  id(sensor_limit_value) = id(sensor3_limit_value);
+                  lv_slider_set_range(sensor_limit_slider, 0, ${Sensor3_Max});
+                  lv_slider_set_value(sensor_limit_slider, id(sensor3_limit_value), LV_ANIM_OFF );
+              - lvgl.label.update:
+                  id: sensor_limit_headline_label
+                  text: !lambda |-
+                    return "${Sensor_Text}3 Temperaturlimit";
+              - lvgl.label.update:
+                  id: sensor_limit_label
+                  text: !lambda |-
+                    return (to_string(static_cast<int>(id(sensor3_limit_value)))+"°C").c_str();
+              - lvgl.widget.redraw:
+                  id: sensor_limit_slider
+              - lvgl.page.show: sensor_limits_page
+            widgets:
+              - line:
+                  points:
+                    - 8, 52
+                    - 74, 52
+                  line_width: 3
+                  line_color: 0x888888
+                  line_rounded: true
+              - label:
+                  x: 78
+                  y: 42
+                  width: 24
+                  text_font: MONTSERRAT_18
+                  text_color: 0x888888
+                  text: '°C'
+              - label:
+                  id: sensor3_label2
+                  x: 0
+                  y: 6
+                  width: 100
+                  text_font: MONTSERRAT_34
+                  text: !lambda |-
+                    if( (id(sensor3_value) < 1500) && (id(sensor3_value) > 0) ) {
+                      return (to_string(static_cast<int>(id(sensor3_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+                  text_color: !lambda |-
+                    if( (id(sensor3_limit_value) == 0) || (id(sensor3_value) < id(sensor3_limit_value) && id(sensor3_value) < 1500) ) {
+                      return lv_color_hex(${Limit_text_Color}); // user-defined color
+                    } else {
+                      return lv_color_hex(0xff0000); // Red
+                    }
+              - label:
+                  id: sensor3_limit_label2
+                  x: 0
+                  y: 60
+                  width: 100
+                  text_font: MONTSERRAT_24
+                  text_color: ${Limit_text_Color}
+                  text: !lambda |-
+                    if( id(sensor3_limit_value) > 0 ){
+                      return (to_string(static_cast<int>(id(sensor3_limit_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+
+        # sensor 4 object with Labels and line
+        - obj:
+            id: sensor4_obj2
+            x: 362
+            y: 172
+            styles: sensor_obj_style
+            clickable: true
+            hidden: !lambda |-
+              if( (id(sensor4_value) < 1500) || (id(sensor4_limit_value) > 0) || (id(hide_inactive_sensors) == false) ) {
+                id(active_sensors) |= 0x08;
+                return false;
+              } else {
+                id(active_sensors) &= ~0x08;
+                return true;
+              }
+            on_click:
+              - lambda: |-
+                  id(page_index) = 2;
+                  id(sensor_index) = 8;
+                  id(sensor_max_value) = ${Sensor4_Max};
+                  id(sensor_limit_value) = id(sensor4_limit_value);
+                  lv_slider_set_range(sensor_limit_slider, 0, ${Sensor4_Max});
+                  lv_slider_set_value(sensor_limit_slider, id(sensor4_limit_value), LV_ANIM_OFF );
+              - lvgl.label.update:
+                  id: sensor_limit_headline_label
+                  text: !lambda |-
+                    return "${Sensor_Text}4 Temperaturlimit";
+              - lvgl.label.update:
+                  id: sensor_limit_label
+                  text: !lambda |-
+                    return (to_string(static_cast<int>(id(sensor4_limit_value)))+"°C").c_str();
+              - lvgl.widget.redraw:
+                  id: sensor_limit_slider
+              - lvgl.page.show: sensor_limits_page
+            widgets:
+              - line:
+                  points:
+                    - 8, 52
+                    - 74, 52
+                  line_width: 3
+                  line_color: 0x888888
+                  line_rounded: true
+              - label:
+                  x: 78
+                  y: 42
+                  width: 24
+                  text_font: MONTSERRAT_18
+                  text_color: 0x888888
+                  text: '°C'
+              - label:
+                  id: sensor4_label2
+                  x: 0
+                  y: 6
+                  width: 100
+                  text_font: MONTSERRAT_34
+                  text: !lambda |-
+                    if( (id(sensor4_value) < 1500) && (id(sensor4_value) > 0) ) {
+                      return (to_string(static_cast<int>(id(sensor4_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+                  text_color: !lambda |-
+                    if( (id(sensor4_limit_value) == 0) || (id(sensor4_value) < id(sensor4_limit_value) && id(sensor4_value) < 1500) ) {
+                      return lv_color_hex(${Limit_text_Color}); // user-defined color
+                    } else {
+                      return lv_color_hex(0xff0000); // Red
+                    }
+              - label:
+                  id: sensor4_limit_label2
+                  x: 0
+                  y: 60
+                  width: 100
+                  text_font: MONTSERRAT_24
+                  text_color: ${Limit_text_Color}
+                  text: !lambda |-
+                    if( id(sensor4_limit_value) > 0 ){
+                      return (to_string(static_cast<int>(id(sensor4_limit_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+
+        # gas object with gas values in % and g
+        - obj:
+            id: gas_obj2
+            x: 0
+            y: 294
+            styles: gas_obj_style
+            widgets:
+              - label:
+                  x: 12
+                  y: 0
+                  text_font: MONTSERRAT_20
+                  text_align: LEFT
+                  text: 'Gas:'
+              - label:
+                  id: gas_percent_label2
+                  x: 260
+                  y: 0
+                  text_font: MONTSERRAT_20
+                  text: '-- %'
+              - label:
+                  id: gas_weight_label2
+                  x: 344
+                  y: 0
+                  text_font: MONTSERRAT_20
+                  text_align: right
+                  text: '--- g'
+              - bar:
+                  id: gas_percent_bar2
+                  x: 80
+                  y: 6
+                  height: 12
+                  width: 200
+                  radius: 5
+                  min_value: 1
+                  max_value: 100
+                  bg_color: 0xffffff
+                  indicator:
+                    bg_color: ${Gas_Bar_Color2}
+                  value: 0
+
+        # symbol for successfull WIFI connection
+        - label:
+            id: wifi_connect_label2
+            x: 430
+            y: 4
+            text_font: MONTSERRAT_18
+            text_color: 0x00ff00
+            text_align: CENTER
+            width: 40
+            text: "\uF1EB" # WIFI symbol
+            hidden: true
+
+        # symbol for battery low warning
+        - label:
+            id: battery_empty_label2
+            x: 390
+            y: 4
+            text_font: MONTSERRAT_18
+            text_color: 0xff0000
+            text_align: CENTER
+            width: 40
+            text: "\uF243" # 25% battery label
+            hidden: true
+
+        # symbol for 'light on'
+        - label:
+            id: light_on_label2
+            x: 350
+            y: 4
+            text_font: MONTSERRAT_18
+            text_color: 0xffff00
+            text_align: CENTER
+            width: 40
+            text: "\uF0E7" # lightning
+            hidden: true
+
+        # symbol for 'firebox open'
+        - label:
+            id: firebox_open_label2
+            x: 310
+            y: 4
+            text_font: MONTSERRAT_18
+            text_color: 0x00ff00
+            text_align: CENTER
+            width: 40
+            text: "\uF093" # arrow up
+            hidden: true
+
+        # symbol for gas low warning
+        - label:
+            id: g32_warning_label2
+            x: 270
+            y: 4
+            text_font: MONTSERRAT_18
+            text_color: 0xff0000
+            text_align: CENTER
+            width: 40
+            text: "\uF071" # invertiertes Ausrufungszeichen
+            hidden: true
+
+        # time string hours:minutes
+        - label:
+            id: display_time2
+            x: 200
+            y: 4
+            text_font: MONTSERRAT_20
+            text_color: 0xffffff
+            text_align: CENTER
+            width: 80
+            text: "00:00"
+            hidden: true
+
+
+  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+    - id: sensor_limits_page
+      skip: true
+      pad_all: 0
+      widgets:
+        - label:
+            id: sensor_limit_headline_label
+            x: 0
+            y: 10
+            width: 440
+            text_font: MONTSERRAT_26
+            text_align: LEFT
+            text: "Sensor x Temperaturlimit:"
+        - label:
+            id: sensor_limit_label
+            x: 350
+            y: 10
+            text_font: MONTSERRAT_26
+            text_align: RIGHT
+            text: "0°C"
+        - slider:
+            id: sensor_limit_slider
+            x: 115
+            y: 100
+            height: 20
+            width: 250
+            radius: 5
+            min_value: 0
+            max_value: 500
+            bg_color: 0xffffff
+            indicator:
+              bg_color: 0xff0000
+            knob:
+              bg_color: 0xff0000
+            value: !lambda return id(sensor_limit_value);
+            adv_hittest: true
+            on_value:
+              - lambda: id(sensor_limit_value) = x;
+              - lvgl.label.update:
+                  id: sensor_limit_label
+                  text: !lambda |-
+                    if( x <= id(sensor_max_value) ) {
+                      return (to_string(static_cast<int>(x))+"°C").c_str();
+                    } else {
+                      return (to_string(static_cast<int>(id(sensor_max_value)))+"°C").c_str();
+                    }
+        - button:
+            x: 30
+            y: 90
+            width: 60
+            height: 40
+            bg_color: 0x333333
+            clickable: true
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: MONTSERRAT_26
+                  text: "-1"
+            on_click:
+              - lambda: |-
+                  if (id(sensor_limit_value) > 0) {
+                    id(sensor_limit_value) -= 1;
+                  } else {
+                    id(sensor_limit_value) = 0;
+                  }
+              - lvgl.slider.update:
+                  id: sensor_limit_slider
+                  value: !lambda return id(sensor_limit_value);
+        - button:
+            x: 30
+            y: 140
+            width: 60
+            height: 40
+            bg_color: 0x333333
+            clickable: true
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: MONTSERRAT_26
+                  text: "-10"
+            on_click:
+              - lambda: |-
+                  if (id(sensor_limit_value) >= 10) {
+                    id(sensor_limit_value) -= 10;
+                  } else {
+                    id(sensor_limit_value) = 0;
+                  }
+              - lvgl.slider.update:
+                  id: sensor_limit_slider
+                  value: !lambda return id(sensor_limit_value);
+        - button:
+            x: 30
+            y: 190
+            width: 60
+            height: 40
+            bg_color: 0x333333
+            clickable: true
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: MONTSERRAT_26
+                  text: "-100"
+            on_click:
+              - lambda: |-
+                  if (id(sensor_limit_value) >= 100) {
+                    id(sensor_limit_value) -= 100;
+                  } else {
+                    id(sensor_limit_value) = 0;
+                  }
+              - lvgl.slider.update:
+                  id: sensor_limit_slider
+                  value: !lambda return id(sensor_limit_value);
+        - button:
+            x: 390
+            y: 90
+            width: 60
+            height: 40
+            bg_color: 0x333333
+            clickable: true
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: MONTSERRAT_26
+                  text: "+1"
+            on_click:
+              - lambda: |-
+                  if (id(sensor_limit_value) < id(sensor_max_value)) {
+                    id(sensor_limit_value) += 1;
+                  } else {
+                    id(sensor_limit_value) = id(sensor_max_value);
+                  }
+              - lvgl.slider.update:
+                  id: sensor_limit_slider
+                  value: !lambda return id(sensor_limit_value);
+        - button:
+            x: 390
+            y: 140
+            width: 60
+            height: 40
+            bg_color: 0x333333
+            clickable: true
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: MONTSERRAT_26
+                  text: "+10"
+            on_click:
+              - lambda: |-
+                  if (id(sensor_limit_value) <= (id(sensor_max_value)-10)) {
+                    id(sensor_limit_value) += 10;
+                  } else {
+                    id(sensor_limit_value) = id(sensor_max_value);
+                  }
+              - lvgl.slider.update:
+                  id: sensor_limit_slider
+                  value: !lambda return id(sensor_limit_value);
+        - button:
+            x: 390
+            y: 190
+            width: 60
+            height: 40
+            bg_color: 0x333333
+            clickable: true
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: MONTSERRAT_26
+                  text: "+100"
+            on_click:
+              - lambda: |-
+                  if (id(sensor_limit_value) <= (id(sensor_max_value)-100) ) {
+                    id(sensor_limit_value) += 100;
+                  } else {
+                    id(sensor_limit_value) = id(sensor_max_value);
+                  }
+              - lvgl.slider.update:
+                  id: sensor_limit_slider
+                  value: !lambda return id(sensor_limit_value);
+        - button:
+            x: 370
+            y: 260
+            width: 80
+            height: 40
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: MONTSERRAT_26
+                  text: "OK"
+            on_click:
+              then:
+              - lambda: |-
+                  switch ( id(sensor_index) ){
+                    case 1:
+                      id(zone1_limit_value) = id(sensor_limit_value);
+                      break;
+                    case 2:
+                      id(zone2_limit_value) = id(sensor_limit_value);
+                      break;
+                    case 3:
+                      id(zone3_limit_value) = id(sensor_limit_value);
+                      break;
+                    case 4:
+                      id(zone4_limit_value) = id(sensor_limit_value);
+                      break;
+                    case 5:
+                      id(sensor1_limit_value) = id(sensor_limit_value);
+                      if( id(sensor1_limit_value) == 0 )  id(active_sensors) &= ~0x01;
+                      break;
+                    case 6:
+                      id(sensor2_limit_value) = id(sensor_limit_value);
+                      if( id(sensor2_limit_value) == 0 )  id(active_sensors) &= ~0x02;
+                      break;
+                    case 7:
+                      id(sensor3_limit_value) = id(sensor_limit_value);
+                      if( id(sensor3_limit_value) == 0 )  id(active_sensors) &= ~0x04;
+                      break;
+                    case 8:
+                      id(sensor4_limit_value) = id(sensor_limit_value);
+                      if( id(sensor4_limit_value) == 0 )  id(active_sensors) &= ~0x08;
+                      break;
+                  }
+              # refresh all widgets on arcs_page
+              - lvgl.widget.refresh: [zone1_limit_arc, zone2_limit_arc, zone3_limit_arc, zone4_limit_arc]
+              - lvgl.widget.refresh: [sensor1_obj, sensor2_obj, sensor3_obj, sensor4_obj]
+              - lvgl.widget.refresh: [sensor1_limit_arc, sensor2_limit_arc, sensor3_limit_arc, sensor4_limit_arc]
+              - lvgl.widget.refresh: [zone1_label, zone2_label, zone3_label, zone4_label]
+              - lvgl.widget.refresh: [sensor1_label, sensor2_label, sensor3_label, sensor4_label]
+              - lvgl.widget.refresh: sensors_headline
+              # refresh all widgets on numbers_page
+              - lvgl.widget.refresh: [zone1_limit_label2, zone2_limit_label2, zone3_limit_label2, zone4_limit_label2]
+              - lvgl.widget.refresh: [sensor1_obj2, sensor2_obj2, sensor3_obj2, sensor4_obj2]
+              - lvgl.widget.refresh: [sensor1_limit_label2, sensor2_limit_label2, sensor3_limit_label2, sensor4_limit_label2]
+              - lvgl.widget.refresh: [zone1_label2, zone2_label2, zone3_label2, zone4_label2]
+              - lvgl.widget.refresh: [sensor1_label2, sensor2_label2, sensor3_label2, sensor4_label2]
+              - lvgl.widget.refresh: sensors_headline2
+
+              - lvgl.widget.redraw:
+
+              - if:
+                  condition:
+                    lambda: 'return id(page_index) == 1;'
+                  then:
+                    - lvgl.page.show: arcs_page
+                  else:
+                    - lvgl.page.show: numbers_page
+
+
+
+sensor:
+  - platform: adc
+    pin: 5
+    name: "Battery SOC"
+    unit_of_measurement: "%"
+    state_class: measurement
+    device_class: battery
+    attenuation: 12db
+    accuracy_decimals: 0
+    samples: 16
+    filters:
+      - multiply: 1.72
+      - sliding_window_moving_average:
+          window_size: 15
+      - calibrate_linear:
+          method: exact
+          datapoints:
+            - 3.00 ->   0.0
+            - 3.36 ->   5.0
+            - 3.41 ->  10.0
+            - 3.48 ->  20.0
+            - 3.52 ->  30.0
+            - 3.56 ->  40.0
+            - 3.61 ->  50.0
+            - 3.70 ->  60.0
+            - 3.79 ->  70.0
+            - 3.89 ->  80.0
+            - 4.00 ->  90.0
+            - 4.05 -> 100.0
+      - clamp:
+          min_value: 0.0
+          max_value: 100.0
+    update_interval: 4s
+    on_value_range:
+      - below: ${Min_SOC}
+        then:
+          - lvgl.widget.show: battery_empty_label
+          - lvgl.widget.show: battery_empty_label2
+      - above: ${Min_SOC}
+        then:
+          - lvgl.widget.hide: battery_empty_label
+          - lvgl.widget.hide: battery_empty_label2
+
+  - platform: homeassistant
+    entity_id: 'sensor.${g32_nickname}_zone_1'
+    id: g32_zone1
+    name: "G32 Zone 1 Internal"
+    unit_of_measurement: "°C"
+    accuracy_decimals: 0
+    on_value:
+      - lambda: id(zone1_value) = x;
+      - lvgl.widget.refresh: zone1_label
+      - lvgl.widget.refresh: zone1_arc
+      - lvgl.widget.refresh: zone1_label2
+      - lvgl.widget.hide: boot_screen
+
+  - platform: homeassistant
+    entity_id: 'sensor.${g32_nickname}_zone_2'
+    id: g32_zone2
+    name: "G32 Zone 2 Internal"
+    unit_of_measurement: "°C"
+    accuracy_decimals: 0
+    on_value:
+      - lambda: id(zone2_value) = x;
+      - lvgl.widget.refresh: zone2_label
+      - lvgl.widget.refresh: zone2_arc
+      - lvgl.widget.refresh: zone2_label2
+
+  - platform: homeassistant
+    entity_id: 'sensor.${g32_nickname}_zone_3'
+    id: g32_zone3
+    name: "G32 Zone 3 Internal"
+    unit_of_measurement: "°C"
+    accuracy_decimals: 0
+    on_value:
+      - lambda: id(zone3_value) = x;
+      - lvgl.widget.refresh: zone3_label
+      - lvgl.widget.refresh: zone3_arc
+      - lvgl.widget.refresh: zone3_label2
+
+  - platform: homeassistant
+    entity_id: 'sensor.${g32_nickname}_zone_4'
+    id: g32_zone4
+    name: "G32 Zone 4 Internal"
+    unit_of_measurement: "°C"
+    accuracy_decimals: 0
+    on_value:
+      - lambda: id(zone4_value) = x;
+      - lvgl.widget.refresh: zone4_label
+      - lvgl.widget.refresh: zone4_arc
+      - lvgl.widget.refresh: zone4_label2
+
+  - platform: homeassistant
+    entity_id: 'sensor.${g32_nickname}_probe_1'
+    id: g32_probe1
+    name: "G32 Sensor 1 External"
+    unit_of_measurement: "°C"
+    accuracy_decimals: 0
+    on_value:
+      - lambda: id(sensor1_value) = x;
+      - lvgl.widget.refresh: sensor1_label
+      - lvgl.widget.refresh: sensor1_arc
+      - lvgl.widget.refresh: sensor1_obj
+      - lvgl.widget.refresh: sensors_headline
+      - lvgl.widget.refresh: sensor1_label2
+      - lvgl.widget.refresh: sensor1_obj2
+      - lvgl.widget.refresh: sensors_headline2
+      - lvgl.widget.refresh: sensors_obj2
+
+  - platform: homeassistant
+    entity_id: 'sensor.${g32_nickname}_probe_2'
+    id: g32_probe2
+    name: "G32 Sensor 2 External"
+    unit_of_measurement: "°C"
+    accuracy_decimals: 0
+    on_value:
+      - lambda: id(sensor2_value) = x;
+      - lvgl.widget.refresh: sensor2_label
+      - lvgl.widget.refresh: sensor2_arc
+      - lvgl.widget.refresh: sensor2_obj
+      - lvgl.widget.refresh: sensors_headline
+      - lvgl.widget.refresh: sensor2_label2
+      - lvgl.widget.refresh: sensor2_obj2
+      - lvgl.widget.refresh: sensors_headline2
+      - lvgl.widget.refresh: sensors_obj2
+
+  - platform: homeassistant
+    entity_id: 'sensor.${g32_nickname}_probe_3'
+    id: g32_probe3
+    name: "G32 Sensor 3 External"
+    unit_of_measurement: "°C"
+    accuracy_decimals: 0
+    on_value:
+      - lambda: id(sensor3_value) = x;
+      - lvgl.widget.refresh: sensor3_label
+      - lvgl.widget.refresh: sensor3_arc
+      - lvgl.widget.refresh: sensor3_obj
+      - lvgl.widget.refresh: sensors_headline
+      - lvgl.widget.refresh: sensor3_label2
+      - lvgl.widget.refresh: sensor3_obj2
+      - lvgl.widget.refresh: sensors_headline2
+      - lvgl.widget.refresh: sensors_obj2
+
+  - platform: homeassistant
+    entity_id: 'sensor.${g32_nickname}_probe_4'
+    id: g32_probe_4
+    name: "G32 Sensor 4 External"
+    unit_of_measurement: "°C"
+    accuracy_decimals: 0
+    on_value:
+      - lambda: id(sensor4_value) = x;
+      - lvgl.widget.refresh: sensor4_label
+      - lvgl.widget.refresh: sensor4_arc
+      - lvgl.widget.refresh: sensor4_obj
+      - lvgl.widget.refresh: sensors_headline
+      - lvgl.widget.refresh: sensor4_label2
+      - lvgl.widget.refresh: sensor4_obj2
+      - lvgl.widget.refresh: sensors_headline2
+      - lvgl.widget.refresh: sensors_obj2
+
+  - platform: homeassistant
+    entity_id: 'sensor.${g32_nickname}_gas_weight'
+    id: g32_gas_weight
+    name: "G32 Gasbuddy Füllstand in g"
+    unit_of_measurement: "g"
+    accuracy_decimals: 1
+    on_value:
+      - lvgl.label.update:
+          id: gas_weight_label
+          text: !lambda |-
+            if(x >= 11000) {return ("11000 g");
+            } else {
+              return (to_string(static_cast<int>(x)) + " g").c_str();
+            }
+      - lvgl.label.update:
+          id: gas_weight_label2
+          text: !lambda |-
+            if(x >= 11000) {return ("11000 g");
+            } else {
+              return (to_string(static_cast<int>(x)) + " g").c_str();
+            }
+
+  - platform: homeassistant
+    entity_id: 'sensor.${g32_nickname}_gas_level'
+    id: g32_gas_percent
+    name: "G32 Gasbuddy Füllstand in %"
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    on_value:
+      - lvgl.label.update:
+          id: gas_percent_label
+          text: !lambda |-
+            if(x > 100) {return ("---");
+            } else {
+              return (to_string(static_cast<int>(x)) + " %").c_str();
+            }
+      - lvgl.label.update:
+          id: gas_percent_label2
+          text: !lambda |-
+            if(x > 100) {return ("---");
+            } else {
+              return (to_string(static_cast<int>(x)) + " %").c_str();
+            }
+      - lvgl.bar.update:
+          id: gas_percent_bar
+          value: !lambda |-
+            if(x > 100) {return (100);
+            } else {
+              return (x);
+            }
+      - lvgl.bar.update:
+          id: gas_percent_bar2
+          value: !lambda |-
+            if(x > 100) {return (100);
+            } else {
+              return (x);
+            }
+
+binary_sensor:
+  - platform: homeassistant
+    entity_id: 'binary_sensor.${g32_nickname}_gas_low'
+    id: g32_gas_low
+    name: "G32 Gasbuddy Füllstand niedrig"
+    on_state:
+      then:
+      - lvgl.bar.update:
+          id: gas_percent_bar
+          indicator:
+            bg_color: !lambda |-
+              if(x) {
+                return lv_color_hex(${Gas_Bar_Low_Color});
+              } else {
+                return lv_color_hex(${Gas_Bar_Color});
+              }
+      - lvgl.bar.update:
+          id: gas_percent_bar2
+          indicator:
+            bg_color: !lambda |-
+              if(x) {
+                return lv_color_hex(${Gas_Bar_Low_Color2});
+              } else {
+                return lv_color_hex(${Gas_Bar_Color2});
+              }
+
+  - platform: homeassistant
+    entity_id: 'binary_sensor.${g32_nickname}_firebox_open'
+    id: g32_firebox_open
+    name: "G32 Haube offen"
+    on_state:
+      then:
+      - lvgl.label.update:
+          id: firebox_open_label
+          hidden: !lambda return(!x);
+      - lvgl.label.update:
+          id: firebox_open_label2
+          hidden: !lambda return(!x);
+
+  - platform: homeassistant
+    entity_id: 'binary_sensor.${g32_nickname}_light_on'
+    id: g32_light_on
+    name: "G32 Licht an"
+    on_state:
+      then:
+      - lvgl.label.update:
+          id: light_on_label
+          hidden: !lambda return(!x);
+      - lvgl.label.update:
+          id: light_on_label2
+          hidden: !lambda return(!x);
+
+script:
+  - id: time_update
+    then:
+      - lvgl.label.update:
+          id: display_time
+          text: !lambda |-
+            static char time_buf[16];
+            auto now = id(sntp_time).now();
+            snprintf(time_buf, sizeof(time_buf), "%02d:%02d", now.hour, now.minute);
+            return time_buf;
+      - lvgl.label.update:
+          id: display_time2
+          text: !lambda |-
+            static char time_buf[16];
+            auto now = id(sntp_time).now();
+            snprintf(time_buf, sizeof(time_buf), "%02d:%02d", now.hour, now.minute);
+            return time_buf;
+      - lvgl.label.update:
+          id: display_time
+          hidden: !lambda |-
+            return (!id(show_time));
+      - lvgl.label.update:
+          id: display_time2
+          hidden: !lambda |-
+            return (!id(show_time));
+
