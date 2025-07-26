@@ -86,7 +86,7 @@ Diese Konfiguration ist für ein Display mit folgenden Komponenten optimiert:
 
 Die Konfiguration bietet zahlreiche Optionen zur **Personalisierung des Displays**:
 
-  * **`Zone_Text`** und **`Sensor_Text`**: Ändern Sie die Präfixe für Ihre Zonen- und Sensorbezeichnungen.
+  * **`Zone_Text`** und **`Sensor_Text`**: Ändern Sie die Präfixe für Ihre Zonen- und Sensorbezeichnungen. (nur noch im Limits Screen wirksam!)
   * **Farbdefinitionen**: Passen Sie die Farben der Temperatur- und Gasbalken an. Die Farben werden im Hexadezimalformat `0xRRGGBB` angegeben.
   * **`Min_SOC`**: Legen Sie den Prozentsatz fest, unter dem das Batteriesymbol angezeigt wird.
   * **`Hide_Inactive_Sensors`**: Schalten Sie dies auf `true`, um Sensoren auszublenden, die keine gültigen Messwerte liefern.
