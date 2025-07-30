@@ -776,7 +776,7 @@ lvgl:
                       return lv_color_hex(0xff0000);
                     }
                   text:  !lambda |-
-                    return (to_string(static_cast<int>(id(zone1_value)))).c_str();
+                    return (to_string(static_cast<int>(id(zone4_value)))).c_str();
               - arc:
                   id: zone4_limit_arc
                   min_value: 1
