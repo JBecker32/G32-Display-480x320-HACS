@@ -14,7 +14,6 @@ substitutions:
   wifi_ssid: !secret wifi_ssid
   wifi_password: !secret wifi_password
 
-
 # hier die Daten aus dem neu erstellten ESPHome Gerät einfügen. Beispiel:
 # Enable Home Assistant API
 # api:
@@ -61,8 +60,11 @@ substitutions:
   Gas_Bar_Color2:     "0xaaaaaa"  # 0xaaaaaa = Grau
   Gas_Bar_Low_Color2: "0xff0000"  # 0xff0000 = Rot
 
-# SOC (in %) des Akkus festlegen, unterhalb dessen das Batteriesymbol angezeigt wird:
-  Min_SOC: "25.0"
+# Batteriesymbol komplett ausgeblenden (kein Akku vorhanden)? true = ausblenden, false = anzeigen :
+#  Hide_Battery_Symbol: 'true'
+  Hide_Battery_Symbol: 'false'
+# SOC (in %) des Akkus festlegen, unterhalb dessen das Batteriesymbol in rot angezeigt wird:
+  Min_SOC: "25"
 
 # sollen inaktive Sensoren komplett ausgeblendet werden? true = ausblenden, false = anzeigen:
 #  Hide_Inactive_Sensors: 'true' # inaktive Sensoren werden ausgeblendet
@@ -101,11 +103,12 @@ esphome:
 
   project:
     name: "g32hacs.display480_320"
-    version: "0.9.9"
+    version: "1.0.0"
 
 esp32:
   board: esp32-s3-devkitc-1
   flash_size: 16MB
+  variant: esp32S3
   framework:
     type: esp-idf
     sdkconfig_options:
@@ -139,6 +142,7 @@ wifi:
   on_connect:
     then:
       - lvgl.widget.show: wifi_connect_label
+      - lvgl.widget.show: wifi_connect_label2
       - rtttl.play: 'Pling1:d=16,o=6,b=140:d6,32p,e6'
       - globals.set:
           id: wifi_connected
@@ -146,6 +150,7 @@ wifi:
   on_disconnect:
     then:
       - lvgl.widget.hide: wifi_connect_label
+      - lvgl.widget.hide: wifi_connect_label2
       - rtttl.play: 'siren:d=8,o=5,b=100:d,e,d,e,d,e,d,e'
       - globals.set:
           id: wifi_connected
@@ -287,6 +292,10 @@ globals:
     type: int
     initial_value: '0'
 
+  - id: hide_battery_symbol
+    type: bool
+    initial_value: ${Hide_Battery_Symbol}
+
   - id: show_time           # enables/disables time (HOUR:MINUT) display
     type: bool
     initial_value: ${Show_Time}
@@ -342,6 +351,14 @@ globals:
   - id: sensor4_limit_value
     type: int
     initial_value: '0'
+
+  - id: battery_soc_value
+    type: int
+    initial_value: '0'
+
+  - id: min_soc_value
+    type: int
+    initial_value: ${Min_SOC}
 
   - id: page_index          # parameter for page
     type: int
@@ -1153,63 +1170,131 @@ lvgl:
                     bg_color: ${Gas_Bar_Color}
                   value: 0
 
+        # symbol for battery low warning
+        - obj:
+            id: battery_symbol_obj
+            x: 420
+            y: 2
+            width: 60
+            height: 24
+            bg_color: 0
+            pad_all: 0
+            outline_width: 0
+            outline_color: 0
+            border_width: 0
+            border_color: 0
+            border_side: NONE
+            outline_pad: 0
+            radius: 0
+            hidden: ${Hide_Battery_Symbol}
+            widgets:
+              - line:
+                  id: battery_symbol
+                  points:
+                    - 12, 2
+                    - 18, 2
+                    - 17, 2
+                    - 17, 4
+                    - 17, 3
+                    - 20, 3
+                    - 19, 3
+                    - 19, 20
+                    - 19, 19
+                    - 10, 19
+                    - 11, 19
+                    - 11, 2
+                    - 11, 3
+                    - 14, 3
+                  line_width: 2
+                  line_rounded: false
+                  line_color: !lambda |-
+                    if( id(battery_soc_value) <= id(min_soc_value) ) {
+                      return lv_color_hex(0xff0000); // red
+                      } else {
+                      return lv_color_hex(0x00ff00); // green
+                    }
+              - bar:
+                  id: battery_bar
+                  x: 12
+                  y: 3
+                  height: 15
+                  width: 6
+                  radius: 0
+                  min_value: 0
+                  max_value: 100
+                  bg_color: 0
+                  # for some unknown reason this code does not work!
+                  indicator:
+                    bg_color:  !lambda |-
+                      if( id(battery_soc_value) <= id(min_soc_value) ) {
+                        return lv_color_hex(0xff0000); // red
+                        } else {
+                        return lv_color_hex(0x00ff00); // green
+                      }
+                    radius: 0
+                  # end of not working code!
+                  value: !lambda return id(battery_soc_value);
+              - label:
+                  id: battery_soc_label
+                  x: 25
+                  y: 3
+                  text_font: MONTSERRAT_14
+                  text_align: CENTER
+                  width: 35
+                  text_color: !lambda |-
+                    if( id(battery_soc_value) <= id(min_soc_value) ) {
+                      return lv_color_hex(0xff0000); // red
+                      } else {
+                      return lv_color_hex(0x00ff00); // green
+                    }
+                  text: !lambda |-
+                    return (to_string(static_cast<int>(id(battery_soc_value)))+"%").c_str();
+
         # symbol for successfull WIFI connection
         - label:
             id: wifi_connect_label
-            x: 430
+            x: 390
             y: 4
             text_font: MONTSERRAT_18
             text_color: 0x00ff00
             text_align: CENTER
-            width: 40
+            width: 30
             text: "\uF1EB" # WIFI symbol
-            hidden: true
-
-        # symbol for battery low warning
-        - label:
-            id: battery_empty_label
-            x: 390
-            y: 4
-            text_font: MONTSERRAT_18
-            text_color: 0xff0000
-            text_align: CENTER
-            width: 40
-            text: "\uF243" # 25% battery label
             hidden: true
 
         # symbol for 'light on'
         - label:
             id: light_on_label
-            x: 350
+            x: 360
             y: 4
             text_font: MONTSERRAT_18
             text_color: 0xffff00
             text_align: CENTER
-            width: 40
+            width: 30
             text: "\uF0E7" # lightning
             hidden: true
 
         # symbol for 'firebox open'
         - label:
             id: firebox_open_label
-            x: 310
+            x: 330
             y: 4
             text_font: MONTSERRAT_18
             text_color: 0x00ff00
             text_align: CENTER
-            width: 40
+            width: 30
             text: "\uF093" # arrow up
             hidden: true
 
         # symbol for gas low warning
         - label:
             id: g32_warning_label
-            x: 270
+            x: 300
             y: 4
             text_font: MONTSERRAT_18
             text_color: 0xff0000
             text_align: CENTER
-            width: 40
+            width: 30
             text: "\uF071" # invertiertes Ausrufungszeichen
             hidden: true
 
@@ -1928,63 +2013,129 @@ lvgl:
                     bg_color: ${Gas_Bar_Color2}
                   value: 0
 
+        # symbol for battery low warning
+        - obj:
+            id: battery_symbol_obj2
+            x: 420
+            y: 2
+            width: 60
+            height: 24
+            bg_color: 0
+            pad_all: 0
+            outline_width: 0
+            outline_color: 0
+            border_width: 0
+            border_color: 0
+            border_side: NONE
+            outline_pad: 0
+            radius: 0
+            hidden: ${Hide_Battery_Symbol}
+            widgets:
+              - line:
+                  id: battery_symbol2
+                  points:
+                    - 12, 2
+                    - 18, 2
+                    - 17, 2
+                    - 17, 4
+                    - 17, 3
+                    - 20, 3
+                    - 19, 3
+                    - 19, 20
+                    - 19, 19
+                    - 10, 19
+                    - 11, 19
+                    - 11, 2
+                    - 11, 3
+                    - 14, 3
+                  line_width: 2
+                  line_rounded: false
+                  line_color: !lambda |-
+                    if( id(battery_soc_value) <= id(min_soc_value) ) {
+                      return lv_color_hex(0xff0000); // red
+                      } else {
+                      return lv_color_hex(0xffffff); // white
+                    }
+              - bar:
+                  id: battery_bar2
+                  x: 12
+                  y: 3
+                  height: 15
+                  width: 6
+                  radius: 0
+                  min_value: 0
+                  max_value: 100
+                  bg_color: 0
+                  indicator:
+                    radius: 0
+                    bg_color:  !lambda |-
+                      if( id(battery_soc_value) <= id(min_soc_value) ) {
+                        return lv_color_hex(0xff0000); // red
+                        } else {
+                        return lv_color_hex(0xffffff); // white
+                      }
+                  value: !lambda return id(battery_soc_value);
+              - label:
+                  id: battery_soc_label2
+                  x: 25
+                  y: 3
+                  text_font: MONTSERRAT_14
+                  text_align: CENTER
+                  width: 35
+                  text_color: !lambda |-
+                    if( id(battery_soc_value) <= id(min_soc_value) ) {
+                      return lv_color_hex(0xff0000); // red
+                      } else {
+                      return lv_color_hex(0xffffff); // white
+                    }
+                  text: !lambda |-
+                    return (to_string(static_cast<int>(id(battery_soc_value)))+"%").c_str();
+
         # symbol for successfull WIFI connection
         - label:
             id: wifi_connect_label2
-            x: 430
+            x: 390
             y: 4
             text_font: MONTSERRAT_18
             text_color: 0x00ff00
             text_align: CENTER
-            width: 40
+            width: 30
             text: "\uF1EB" # WIFI symbol
-            hidden: true
-
-        # symbol for battery low warning
-        - label:
-            id: battery_empty_label2
-            x: 390
-            y: 4
-            text_font: MONTSERRAT_18
-            text_color: 0xff0000
-            text_align: CENTER
-            width: 40
-            text: "\uF243" # 25% battery label
             hidden: true
 
         # symbol for 'light on'
         - label:
             id: light_on_label2
-            x: 350
+            x: 360
             y: 4
             text_font: MONTSERRAT_18
             text_color: 0xffff00
             text_align: CENTER
-            width: 40
+            width: 30
             text: "\uF0E7" # lightning
             hidden: true
 
         # symbol for 'firebox open'
         - label:
             id: firebox_open_label2
-            x: 310
+            x: 330
             y: 4
             text_font: MONTSERRAT_18
             text_color: 0x00ff00
             text_align: CENTER
-            width: 40
+            width: 30
             text: "\uF093" # arrow up
             hidden: true
 
         # symbol for gas low warning
         - label:
             id: g32_warning_label2
-            x: 270
+            x: 300
             y: 4
             text_font: MONTSERRAT_18
             text_color: 0xff0000
             text_align: CENTER
-            width: 40
+            width: 30
             text: "\uF071" # invertiertes Ausrufungszeichen
             hidden: true
 
@@ -2256,17 +2407,17 @@ sensor:
     unit_of_measurement: "%"
     state_class: measurement
     device_class: battery
-    attenuation: 12db
-    accuracy_decimals: 0
-    samples: 16
+    accuracy_decimals: 2       # ???
+    attenuation: 12db          # input voltage range: 150mV --- 2450mV
+    samples: 16                # samples taken per update interval
     filters:
       - multiply: 1.72
       - sliding_window_moving_average:
-          window_size: 15
-      - calibrate_linear:
+          window_size: 15      # average over 15 values
+      - calibrate_linear:      # linearise voltage->SOC dependency
           method: exact
           datapoints:
-            - 3.00 ->   0.0
+            - 3.00 ->   0.0    # <=3.00V = battery empty (0.0%)
             - 3.36 ->   5.0
             - 3.41 ->  10.0
             - 3.48 ->  20.0
@@ -2277,20 +2428,37 @@ sensor:
             - 3.79 ->  70.0
             - 3.89 ->  80.0
             - 4.00 ->  90.0
-            - 4.05 -> 100.0
+            - 4.05 -> 100.0    # >=4.05V = battery full (100.0%)
       - clamp:
           min_value: 0.0
           max_value: 100.0
-    update_interval: 4s
-    on_value_range:
-      - below: ${Min_SOC}
-        then:
-          - lvgl.widget.show: battery_empty_label
-          - lvgl.widget.show: battery_empty_label2
-      - above: ${Min_SOC}
-        then:
-          - lvgl.widget.hide: battery_empty_label
-          - lvgl.widget.hide: battery_empty_label2
+    update_interval: 4s        # new value after 4s*15(=window size) = 60s!
+    on_value:
+      - lambda: id(battery_soc_value) = x;
+      - lvgl.widget.refresh: battery_soc_label
+      - lvgl.widget.refresh: battery_symbol
+      - lvgl.widget.refresh: battery_bar
+      - lvgl.bar.update:
+          id: battery_bar
+          indicator:
+            bg_color:  !lambda |-
+              if( id(battery_soc_value) <= id(min_soc_value) ) {
+                return lv_color_hex(0xff0000); // red
+                } else {
+                return lv_color_hex(0x00ff00); // green
+              }
+      - lvgl.widget.refresh: battery_soc_label2
+      - lvgl.widget.refresh: battery_symbol2
+      - lvgl.widget.refresh: battery_bar2
+      - lvgl.bar.update:
+          id: battery_bar2
+          indicator:
+            bg_color:  !lambda |-
+              if( id(battery_soc_value) <= id(min_soc_value) ) {
+                return lv_color_hex(0xff0000); // red
+                } else {
+                return lv_color_hex(0xffffff); // white
+              }
 
   - platform: homeassistant
     entity_id: 'sensor.${g32_nickname}_zone_1'
