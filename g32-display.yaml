@@ -109,7 +109,7 @@ esphome:
 
   project:
     name: "g32.hacs_display480_320"
-    version: "1.1.0"
+    version: "1.1.0b"
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -156,8 +156,10 @@ wifi:
           value: 'true'
       - if:
           condition:
-            lambda: 'return id(show_arcs_page) == false;'
+            lambda: 'return id(show_arcs_page) == true;'
           then:
+            - lvgl.page.show: arcs_page
+          else:
             - lvgl.page.show: numbers_page
       - lvgl.widget.hide: boot_screen
   on_disconnect:
@@ -235,8 +237,13 @@ touchscreen:
           condition: lvgl.is_paused
           then:
             - logger.log: "Display is resuming"
-            - lvgl.page.show:
-                id: arcs_page
+            - if:
+                condition:
+                  lambda: 'return id(show_arcs_page) == true;'
+                then:
+                  - lvgl.page.show: arcs_page
+                else:
+                  - lvgl.page.show: numbers_page
             - lvgl.resume:
             - lvgl.widget.redraw:
             - light.turn_on: backlight
@@ -1479,7 +1486,7 @@ lvgl:
                       return lv_color_hex(0xff0000); // red
                     }
                   text: !lambda |-
-                    if( id(zone3_value) < 1500) {return (to_string(static_cast<int>(id(zone1_value)))).c_str();
+                    if( id(zone1_value) < 1500) {return (to_string(static_cast<int>(id(zone1_value)))).c_str();
                     } else {
                       return ("---");
                     }
@@ -1551,7 +1558,7 @@ lvgl:
                       return lv_color_hex(0xff0000); // red
                     }
                   text: !lambda |-
-                    if( id(zone3_value) < 1500) {return (to_string(static_cast<int>(id(zone2_value)))).c_str();
+                    if( id(zone2_value) < 1500) {return (to_string(static_cast<int>(id(zone2_value)))).c_str();
                     } else {
                       return ("---");
                     }
@@ -1695,7 +1702,7 @@ lvgl:
                       return lv_color_hex(0xff0000); // red
                     }
                   text: !lambda |-
-                    if( id(zone3_value) < 1500) {return (to_string(static_cast<int>(id(zone4_value)))).c_str();
+                    if( id(zone4_value) < 1500) {return (to_string(static_cast<int>(id(zone4_value)))).c_str();
                     } else {
                       return ("---");
                     }
