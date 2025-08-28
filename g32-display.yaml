@@ -3,9 +3,9 @@ substitutions:
 # bitte nur in diesen nächsten Zeilen Änderungen vornehmen                    #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Name des ESPHome Geräts (kann frei gewählt werden, keine Sonderzeichen)
-  name: g32-display
+  name: g32-display-hacs
   device_description: "Monitor an OW G32 grill"
-  g32_nickname: "my_g32"
+  g32_nickname: "elgrillo"
 # Credentials des eigenen Wifi Netzwerks einfügen:
 #  wifi_ssid: "my_wifi_ssid"
 #  wifi_password: "my_wifi_password"
@@ -79,7 +79,7 @@ substitutions:
   Sensor3_Max: "130"
   Sensor4_Max: "130"
 
-# Lautsprecher (Beeper) Lautsrtärke festlegen 1.0 = Maximum, 0.1 = sehr leise
+# Lautsprecher (Beeper) Lautstärke festlegen 1.0 = Maximum, 0.1 = sehr leise
   Beeper_Max: "0.8"
 
 # Zeitinterval für Lautsprecher (Beeper) Alarmmeldungen festlegen Default: 5s
@@ -87,6 +87,12 @@ substitutions:
 
 # Uhrzeit 11:32 oben in der Mitte der Statuszeile anzeigen? true = Ja, false = Nein
   Show_Time: 'true'
+
+# welche Anzeigen sollen aktiv sein, die bunten 'Arcs' und/oder die grauen 'Zahlen'?
+# Wenn beide aktiv, dann Wechsel zwischen den Anzeigen durch 'Swipen' nach rechts oder links
+# anzeigen: 'true', nicht anzeigen: 'false' (mindestens eins sollte 'true' sein!)
+  Show_Arcs_Page: 'true'
+  Show_Numbers_Page: 'true'
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -102,13 +108,13 @@ esphome:
     board_build.f_cpu: 240000000L
 
   project:
-    name: "g32hacs.display480_320"
-    version: "1.0.0"
+    name: "g32.hacs_display480_320"
+    version: "1.1.0"
 
 esp32:
   board: esp32-s3-devkitc-1
   flash_size: 16MB
-  variant: esp32S3
+#  variant: esp32S3
   framework:
     type: esp-idf
     sdkconfig_options:
@@ -138,19 +144,27 @@ ota:
 wifi:
   ssid: ${wifi_ssid}
   password: ${wifi_password}
-  fast_connect: True
+  fast_connect: true
   on_connect:
     then:
-      - lvgl.widget.show: wifi_connect_label
-      - lvgl.widget.show: wifi_connect_label2
+      - lvgl.widget.update:
+          id: [wifi_connect_label, wifi_connect_label2]
+          hidden: false
       - rtttl.play: 'Pling1:d=16,o=6,b=140:d6,32p,e6'
       - globals.set:
           id: wifi_connected
           value: 'true'
+      - if:
+          condition:
+            lambda: 'return id(show_arcs_page) == false;'
+          then:
+            - lvgl.page.show: numbers_page
+      - lvgl.widget.hide: boot_screen
   on_disconnect:
     then:
-      - lvgl.widget.hide: wifi_connect_label
-      - lvgl.widget.hide: wifi_connect_label2
+      - lvgl.widget.update:
+          id: [wifi_connect_label, wifi_connect_label2]
+          hidden: true
       - rtttl.play: 'siren:d=8,o=5,b=100:d,e,d,e,d,e,d,e'
       - globals.set:
           id: wifi_connected
@@ -285,6 +299,18 @@ globals:
   - id: wifi_connected
     type: bool
     initial_value: 'false'
+
+  - id: show_arcs_page
+    type: bool
+    initial_value: ${Show_Arcs_Page}
+  - id: show_numbers_page
+    type: bool
+    initial_value: ${Show_Numbers_Page}
+
+#  - id: show_boot_screen
+#    type: bool
+#    initial_value: ${Show_Boot_Screen}
+
   - id: hide_inactive_sensors
     type: bool
     initial_value: ${Hide_Inactive_Sensors}
@@ -302,29 +328,29 @@ globals:
 
   - id: zone1_value         # the value used for Zone temperature labels and arcs
     type: int
-    initial_value: '0'
+    initial_value: '1500'   # 1500 means invalid
   - id: zone2_value
     type: int
-    initial_value: '0'
+    initial_value: '1500'
   - id: zone3_value
     type: int
-    initial_value: '0'
+    initial_value: '1500'
   - id: zone4_value
     type: int
-    initial_value: '0'
+    initial_value: '1500'
 
   - id: sensor1_value       # the value used for Sensor temperature labels and arcs
     type: int
-    initial_value: '0'
+    initial_value: '1500'
   - id: sensor2_value
     type: int
-    initial_value: '0'
+    initial_value: '1500'
   - id: sensor3_value
     type: int
-    initial_value: '0'
+    initial_value: '1500'
   - id: sensor4_value
     type: int
-    initial_value: '0'
+    initial_value: '1500'
 
   - id: zone1_limit_value   # the value used for Zone limit labels and arcs
     type: int
@@ -391,21 +417,22 @@ number:
     mode: box
 
 #-------------------------------------------
-# SNTP Time platform
+# Homeassistant or SNTP Time platform
 #-------------------------------------------
 time:
-  platform: sntp
-  id: sntp_time
+#  platform: sntp
+#  id: ha_time
+#  servers:
+#   - ntp0.ntp-servers.net
+#   - ntp1.ntp-servers.net
+#   - ntp2.ntp-servers.net
+  platform: homeassistant
+  id: ha_time
   timezone: Europe/Berlin
-  servers:
-   - ntp0.ntp-servers.net
-   - ntp1.ntp-servers.net
-   - ntp2.ntp-servers.net
   on_time_sync:
     - script.execute: time_update
   on_time:
-    - minutes: '*'
-      seconds: 0
+    - seconds: '*'
       then:
         - script.execute: time_update
 
@@ -544,16 +571,24 @@ lvgl:
       pad_all: 0
       on_swipe_left:
         then:
-          - lambda: 'lv_indev_wait_release(lv_indev_get_act());'
-          - lvgl.page.next:
-              animation: OUT_LEFT
-              time: 600ms
+          if:
+            condition:
+              lambda: 'return id(show_numbers_page) == true;'
+            then:
+              - lambda: 'lv_indev_wait_release(lv_indev_get_act());'
+              - lvgl.page.next:
+                  animation: OUT_LEFT
+                  time: 600ms
       on_swipe_right:
         then:
-          - lambda: 'lv_indev_wait_release(lv_indev_get_act());'
-          - lvgl.page.previous:
-              animation: OUT_RIGHT
-              time: 600ms
+          if:
+            condition:
+              lambda: 'return id(show_numbers_page) == true;'
+            then:
+              - lambda: 'lv_indev_wait_release(lv_indev_get_act());'
+              - lvgl.page.next:
+                  animation: OUT_RIGHT
+                  time: 600ms
       widgets:
         # one common headline for all temperature zones
         - label:
@@ -569,26 +604,6 @@ lvgl:
             x: 0
             y: 30
             styles: temp_obj_style
-            clickable: ${Enable_Temperature_Limits}
-            on_press:
-              - lambda: |-
-                  id(page_index) = 1;
-                  id(sensor_index) = 1;
-                  id(sensor_max_value) = 500;
-                  id(sensor_limit_value) = id(zone1_limit_value);
-                  lv_slider_set_range(sensor_limit_slider, 0, 500);
-                  lv_slider_set_value(sensor_limit_slider, id(zone1_limit_value), LV_ANIM_OFF );
-              - lvgl.label.update:
-                  id: sensor_limit_headline_label
-                  text: !lambda |-
-                    return "${Zone_Text}1 Temperaturlimit";
-              - lvgl.label.update:
-                  id: sensor_limit_label
-                  text: !lambda |-
-                    return (to_string(static_cast<int>(id(zone1_limit_value)))+"°C").c_str();
-              - lvgl.widget.redraw:
-                  id: sensor_limit_slider
-              - lvgl.page.show: sensor_limits_page
             widgets:
               - label:
                   x: 0
@@ -606,8 +621,31 @@ lvgl:
                       } else {
                       return lv_color_hex(0xff0000);
                     }
-                  text:  !lambda |-
-                    return (to_string(static_cast<int>(id(zone1_value)))).c_str();
+                  text: !lambda |-
+                    if( id(zone1_value) < 1500) {return (to_string(static_cast<int>(id(zone1_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+                  clickable: ${Enable_Temperature_Limits}
+                  on_press:
+                    - lambda: |-
+                        id(page_index) = 1;
+                        id(sensor_index) = 1;
+                        id(sensor_max_value) = 500;
+                        id(sensor_limit_value) = id(zone1_limit_value);
+                        lv_slider_set_range(sensor_limit_slider, 0, 500);
+                        lv_slider_set_value(sensor_limit_slider, id(zone1_limit_value), LV_ANIM_OFF );
+                    - lvgl.label.update:
+                        id: sensor_limit_headline_label
+                        text: !lambda |-
+                          return "${Zone_Text}1 Temperaturlimit";
+                    - lvgl.label.update:
+                        id: sensor_limit_label
+                        text: !lambda |-
+                          return (to_string(static_cast<int>(id(zone1_limit_value)))+"°C").c_str();
+                    - lvgl.widget.redraw:
+                        id: sensor_limit_slider
+                    - lvgl.page.show: sensor_limits_page
               - arc:
                   id: zone1_limit_arc
                   min_value: 1
@@ -623,7 +661,11 @@ lvgl:
                   indicator:
                     arc_color: ${Zone_Arc_Color}
                   styles: arc_style
-                  value: !lambda return id(zone1_value);
+                  value: !lambda |-
+                    if( id(zone1_value) < 1500) {return id(zone1_value);
+                    } else {
+                      return 0;
+                    }
 
         # zone 2 object with Headline, Labels and Arc
         - obj:
@@ -631,26 +673,6 @@ lvgl:
             x: 120
             y: 30
             styles: temp_obj_style
-            clickable: ${Enable_Temperature_Limits}
-            on_press:
-              - lambda: |-
-                  id(page_index) = 1;
-                  id(sensor_index) = 2;
-                  id(sensor_max_value) = 500;
-                  id(sensor_limit_value) = id(zone2_limit_value);
-                  lv_slider_set_range(sensor_limit_slider, 0, 500);
-                  lv_slider_set_value(sensor_limit_slider, id(zone2_limit_value), LV_ANIM_OFF );
-              - lvgl.label.update:
-                  id: sensor_limit_headline_label
-                  text: !lambda |-
-                    return "${Zone_Text}2 Temperaturlimit";
-              - lvgl.label.update:
-                  id: sensor_limit_label
-                  text: !lambda |-
-                    return (to_string(static_cast<int>(id(zone2_limit_value)))+"°C").c_str();
-              - lvgl.widget.redraw:
-                  id: sensor_limit_slider
-              - lvgl.page.show: sensor_limits_page
             widgets:
               - label:
                   x: 0
@@ -668,8 +690,31 @@ lvgl:
                       } else {
                       return lv_color_hex(0xff0000);
                     }
-                  text:  !lambda |-
-                    return (to_string(static_cast<int>(id(zone2_value)))).c_str();
+                  text: !lambda |-
+                    if( id(zone1_value) < 1500) {return (to_string(static_cast<int>(id(zone2_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+                  clickable: ${Enable_Temperature_Limits}
+                  on_press:
+                    - lambda: |-
+                        id(page_index) = 1;
+                        id(sensor_index) = 2;
+                        id(sensor_max_value) = 500;
+                        id(sensor_limit_value) = id(zone2_limit_value);
+                        lv_slider_set_range(sensor_limit_slider, 0, 500);
+                        lv_slider_set_value(sensor_limit_slider, id(zone2_limit_value), LV_ANIM_OFF );
+                    - lvgl.label.update:
+                        id: sensor_limit_headline_label
+                        text: !lambda |-
+                          return "${Zone_Text}2 Temperaturlimit";
+                    - lvgl.label.update:
+                        id: sensor_limit_label
+                        text: !lambda |-
+                          return (to_string(static_cast<int>(id(zone2_limit_value)))+"°C").c_str();
+                    - lvgl.widget.redraw:
+                        id: sensor_limit_slider
+                    - lvgl.page.show: sensor_limits_page
               - arc:
                   id: zone2_limit_arc
                   min_value: 1
@@ -685,7 +730,11 @@ lvgl:
                   indicator:
                     arc_color: ${Zone_Arc_Color}
                   styles: arc_style
-                  value: !lambda return id(zone2_value);
+                  value: !lambda |-
+                    if( id(zone1_value) < 1500) {return id(zone2_value);
+                    } else {
+                      return 0;
+                    }
 
         # zone 3 object with Headline, Labels and Arc
         - obj:
@@ -693,26 +742,6 @@ lvgl:
             x: 240
             y: 30
             styles: temp_obj_style
-            clickable: ${Enable_Temperature_Limits}
-            on_press:
-              - lambda: |-
-                  id(page_index) = 1;
-                  id(sensor_index) = 3;
-                  id(sensor_max_value) = 500;
-                  id(sensor_limit_value) = id(zone3_limit_value);
-                  lv_slider_set_range(sensor_limit_slider, 0, 500);
-                  lv_slider_set_value(sensor_limit_slider, id(zone3_limit_value), LV_ANIM_OFF );
-              - lvgl.label.update:
-                  id: sensor_limit_headline_label
-                  text: !lambda |-
-                    return "${Zone_Text}3 Temperaturlimit";
-              - lvgl.label.update:
-                  id: sensor_limit_label
-                  text: !lambda |-
-                    return (to_string(static_cast<int>(id(zone3_limit_value)))+"°C").c_str();
-              - lvgl.widget.redraw:
-                  id: sensor_limit_slider
-              - lvgl.page.show: sensor_limits_page
             widgets:
               - label:
                   x: 0
@@ -730,8 +759,31 @@ lvgl:
                       } else {
                       return lv_color_hex(0xff0000);
                     }
-                  text:  !lambda |-
-                    return (to_string(static_cast<int>(id(zone3_value)))).c_str();
+                  text: !lambda |-
+                    if( id(zone1_value) < 1500) {return (to_string(static_cast<int>(id(zone3_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+                  clickable: ${Enable_Temperature_Limits}
+                  on_press:
+                    - lambda: |-
+                        id(page_index) = 1;
+                        id(sensor_index) = 3;
+                        id(sensor_max_value) = 500;
+                        id(sensor_limit_value) = id(zone3_limit_value);
+                        lv_slider_set_range(sensor_limit_slider, 0, 500);
+                        lv_slider_set_value(sensor_limit_slider, id(zone3_limit_value), LV_ANIM_OFF );
+                    - lvgl.label.update:
+                        id: sensor_limit_headline_label
+                        text: !lambda |-
+                          return "${Zone_Text}3 Temperaturlimit";
+                    - lvgl.label.update:
+                        id: sensor_limit_label
+                        text: !lambda |-
+                          return (to_string(static_cast<int>(id(zone3_limit_value)))+"°C").c_str();
+                    - lvgl.widget.redraw:
+                        id: sensor_limit_slider
+                    - lvgl.page.show: sensor_limits_page
               - arc:
                   id: zone3_limit_arc
                   min_value: 1
@@ -747,7 +799,11 @@ lvgl:
                   indicator:
                     arc_color: ${Zone_Arc_Color}
                   styles: arc_style
-                  value: !lambda return id(zone3_value);
+                  value: !lambda |-
+                    if( id(zone1_value) < 1500) {return id(zone3_value);
+                    } else {
+                      return 0;
+                    }
 
         # zone 4 object with Headline, Labels and Arc
         - obj:
@@ -755,26 +811,6 @@ lvgl:
             x: 360
             y: 30
             styles: temp_obj_style
-            clickable: ${Enable_Temperature_Limits}
-            on_press:
-              - lambda: |-
-                  id(page_index) = 1;
-                  id(sensor_index) = 4;
-                  id(sensor_max_value) = 500;
-                  id(sensor_limit_value) = id(zone4_limit_value);
-                  lv_slider_set_range(sensor_limit_slider, 0, 500);
-                  lv_slider_set_value(sensor_limit_slider, id(zone4_limit_value), LV_ANIM_OFF );
-              - lvgl.label.update:
-                  id: sensor_limit_headline_label
-                  text: !lambda |-
-                    return "${Zone_Text}4 Temperaturlimit";
-              - lvgl.label.update:
-                  id: sensor_limit_label
-                  text: !lambda |-
-                    return (to_string(static_cast<int>(id(zone4_limit_value)))+"°C").c_str();
-              - lvgl.widget.redraw:
-                  id: sensor_limit_slider
-              - lvgl.page.show: sensor_limits_page
             widgets:
               - label:
                   x: 0
@@ -792,8 +828,31 @@ lvgl:
                       } else {
                       return lv_color_hex(0xff0000);
                     }
-                  text:  !lambda |-
-                    return (to_string(static_cast<int>(id(zone4_value)))).c_str();
+                  text: !lambda |-
+                    if( id(zone1_value) < 1500) {return (to_string(static_cast<int>(id(zone4_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+                  clickable: ${Enable_Temperature_Limits}
+                  on_press:
+                    - lambda: |-
+                        id(page_index) = 1;
+                        id(sensor_index) = 4;
+                        id(sensor_max_value) = 500;
+                        id(sensor_limit_value) = id(zone4_limit_value);
+                        lv_slider_set_range(sensor_limit_slider, 0, 500);
+                        lv_slider_set_value(sensor_limit_slider, id(zone4_limit_value), LV_ANIM_OFF );
+                    - lvgl.label.update:
+                        id: sensor_limit_headline_label
+                        text: !lambda |-
+                          return "${Zone_Text}4 Temperaturlimit";
+                    - lvgl.label.update:
+                        id: sensor_limit_label
+                        text: !lambda |-
+                          return (to_string(static_cast<int>(id(zone4_limit_value)))+"°C").c_str();
+                    - lvgl.widget.redraw:
+                        id: sensor_limit_slider
+                    - lvgl.page.show: sensor_limits_page
               - arc:
                   id: zone4_limit_arc
                   min_value: 1
@@ -809,7 +868,11 @@ lvgl:
                   indicator:
                     arc_color: ${Zone_Arc_Color}
                   styles: arc_style
-                  value: !lambda return id(zone4_value);
+                  value: !lambda |-
+                    if( id(zone1_value) < 1500) {return id(zone4_value);
+                    } else {
+                      return 0;
+                    }
 
         # one common headline for all sensors
         - label:
@@ -829,7 +892,6 @@ lvgl:
             y: 176
             styles: temp_obj_style
             radius: 50
-            clickable: ${Enable_Temperature_Limits}
             hidden: !lambda |-
               if( (id(sensor1_value) < 1500) || (id(sensor1_limit_value) > 0) || (id(hide_inactive_sensors) == false) ) {
                 id(active_sensors) |= 0x01;
@@ -838,6 +900,7 @@ lvgl:
                 id(active_sensors) &= ~0x01;
                 return true;
               }
+            clickable: ${Enable_Temperature_Limits}
             on_press:
               - lambda: |-
                   id(page_index) = 1;
@@ -879,6 +942,26 @@ lvgl:
                     } else {
                       return lv_color_hex(0xff0000); // Red
                     }
+                  clickable: ${Enable_Temperature_Limits}
+                  on_press:
+                    - lambda: |-
+                        id(page_index) = 1;
+                        id(sensor_index) = 5;
+                        id(sensor_max_value) = ${Sensor1_Max};
+                        id(sensor_limit_value) = id(sensor1_limit_value);
+                        lv_slider_set_range(sensor_limit_slider, 0, ${Sensor1_Max});
+                        lv_slider_set_value(sensor_limit_slider, id(sensor1_limit_value), LV_ANIM_OFF );
+                    - lvgl.label.update:
+                        id: sensor_limit_headline_label
+                        text: !lambda |-
+                          return "${Sensor_Text}1 Temperaturlimit";
+                    - lvgl.label.update:
+                        id: sensor_limit_label
+                        text: !lambda |-
+                          return (to_string(static_cast<int>(id(sensor1_limit_value)))+"°C").c_str();
+                    - lvgl.widget.redraw:
+                        id: sensor_limit_slider
+                    - lvgl.page.show: sensor_limits_page
               - arc:
                   id: sensor1_limit_arc
                   min_value: 1
@@ -906,7 +989,6 @@ lvgl:
             x: 120
             y: 176
             styles: temp_obj_style
-            clickable: ${Enable_Temperature_Limits}
             hidden: !lambda |-
               if( (id(sensor2_value) < 1500) || (id(sensor2_limit_value) > 0) || (id(hide_inactive_sensors) == false) ) {
                 id(active_sensors) |= 0x02;
@@ -915,6 +997,7 @@ lvgl:
                 id(active_sensors) &= ~0x02;
                 return true;
               }
+            clickable: ${Enable_Temperature_Limits}
             on_press:
               - lambda: |-
                   id(page_index) = 1;
@@ -956,6 +1039,26 @@ lvgl:
                     } else {
                       return lv_color_hex(0xff0000); // Red
                     }
+                  clickable: ${Enable_Temperature_Limits}
+                  on_press:
+                    - lambda: |-
+                        id(page_index) = 1;
+                        id(sensor_index) = 6;
+                        id(sensor_max_value) = ${Sensor2_Max};
+                        id(sensor_limit_value) = id(sensor2_limit_value);
+                        lv_slider_set_range(sensor_limit_slider, 0, ${Sensor2_Max});
+                        lv_slider_set_value(sensor_limit_slider, id(sensor2_limit_value), LV_ANIM_OFF );
+                    - lvgl.label.update:
+                        id: sensor_limit_headline_label
+                        text: !lambda |-
+                          return "${Sensor_Text}2 Temperaturlimit";
+                    - lvgl.label.update:
+                        id: sensor_limit_label
+                        text: !lambda |-
+                          return (to_string(static_cast<int>(id(sensor2_limit_value)))+"°C").c_str();
+                    - lvgl.widget.redraw:
+                        id: sensor_limit_slider
+                    - lvgl.page.show: sensor_limits_page
               - arc:
                   id: sensor2_limit_arc
                   min_value: 1
@@ -983,7 +1086,6 @@ lvgl:
             x: 240
             y: 176
             styles: temp_obj_style
-            clickable: ${Enable_Temperature_Limits}
             hidden: !lambda |-
               if( (id(sensor3_value) < 1500) || (id(sensor3_limit_value) > 0) || (id(hide_inactive_sensors) == false) ) {
                 id(active_sensors) |= 0x04;
@@ -992,25 +1094,6 @@ lvgl:
                 id(active_sensors) &= ~0x04;
                 return true;
               }
-            on_press:
-              - lambda: |-
-                  id(page_index) = 1;
-                  id(sensor_index) = 7;
-                  id(sensor_max_value) = ${Sensor3_Max};
-                  id(sensor_limit_value) = id(sensor3_limit_value);
-                  lv_slider_set_range(sensor_limit_slider, 0, ${Sensor3_Max});
-                  lv_slider_set_value(sensor_limit_slider, id(sensor3_limit_value), LV_ANIM_OFF );
-              - lvgl.label.update:
-                  id: sensor_limit_headline_label
-                  text: !lambda |-
-                    return "${Sensor_Text}3 Temperaturlimit";
-              - lvgl.label.update:
-                  id: sensor_limit_label
-                  text: !lambda |-
-                    return (to_string(static_cast<int>(id(sensor3_limit_value)))+"°C").c_str();
-              - lvgl.widget.redraw:
-                  id: sensor_limit_slider
-              - lvgl.page.show: sensor_limits_page
             widgets:
               - label:
                   x: 0
@@ -1033,6 +1116,26 @@ lvgl:
                     } else {
                       return lv_color_hex(0xff0000); // Red
                     }
+                  clickable: ${Enable_Temperature_Limits}
+                  on_press:
+                    - lambda: |-
+                        id(page_index) = 1;
+                        id(sensor_index) = 7;
+                        id(sensor_max_value) = ${Sensor3_Max};
+                        id(sensor_limit_value) = id(sensor3_limit_value);
+                        lv_slider_set_range(sensor_limit_slider, 0, ${Sensor3_Max});
+                        lv_slider_set_value(sensor_limit_slider, id(sensor3_limit_value), LV_ANIM_OFF );
+                    - lvgl.label.update:
+                        id: sensor_limit_headline_label
+                        text: !lambda |-
+                          return "${Sensor_Text}3 Temperaturlimit";
+                    - lvgl.label.update:
+                        id: sensor_limit_label
+                        text: !lambda |-
+                          return (to_string(static_cast<int>(id(sensor3_limit_value)))+"°C").c_str();
+                    - lvgl.widget.redraw:
+                        id: sensor_limit_slider
+                    - lvgl.page.show: sensor_limits_page
               - arc:
                   id: sensor3_limit_arc
                   min_value: 1
@@ -1060,7 +1163,6 @@ lvgl:
             x: 360
             y: 176
             styles: temp_obj_style
-            clickable: ${Enable_Temperature_Limits}
             hidden: !lambda |-
               if( (id(sensor4_value) < 1500) || (id(sensor4_limit_value) > 0) || (id(hide_inactive_sensors) == false) ) {
                 id(active_sensors) |= 0x08;
@@ -1069,25 +1171,6 @@ lvgl:
                 id(active_sensors) &= ~0x08;
                 return true;
               }
-            on_press:
-              - lambda: |-
-                  id(page_index) = 1;
-                  id(sensor_index) = 8;
-                  id(sensor_max_value) = ${Sensor4_Max};
-                  id(sensor_limit_value) = id(sensor4_limit_value);
-                  lv_slider_set_range(sensor_limit_slider, 0, ${Sensor4_Max});
-                  lv_slider_set_value(sensor_limit_slider, id(sensor4_limit_value), LV_ANIM_OFF );
-              - lvgl.label.update:
-                  id: sensor_limit_headline_label
-                  text: !lambda |-
-                    return "${Sensor_Text}3 Temperaturlimit";
-              - lvgl.label.update:
-                  id: sensor_limit_label
-                  text: !lambda |-
-                    return (to_string(static_cast<int>(id(sensor3_limit_value)))+"°C").c_str();
-              - lvgl.widget.redraw:
-                  id: sensor_limit_slider
-              - lvgl.page.show: sensor_limits_page
             widgets:
               - label:
                   x: 0
@@ -1110,6 +1193,26 @@ lvgl:
                     } else {
                       return lv_color_hex(0xff0000); // Red
                     }
+                  clickable: ${Enable_Temperature_Limits}
+                  on_press:
+                    - lambda: |-
+                        id(page_index) = 1;
+                        id(sensor_index) = 8;
+                        id(sensor_max_value) = ${Sensor4_Max};
+                        id(sensor_limit_value) = id(sensor4_limit_value);
+                        lv_slider_set_range(sensor_limit_slider, 0, ${Sensor4_Max});
+                        lv_slider_set_value(sensor_limit_slider, id(sensor4_limit_value), LV_ANIM_OFF );
+                    - lvgl.label.update:
+                        id: sensor_limit_headline_label
+                        text: !lambda |-
+                          return "${Sensor_Text}3 Temperaturlimit";
+                    - lvgl.label.update:
+                        id: sensor_limit_label
+                        text: !lambda |-
+                          return (to_string(static_cast<int>(id(sensor3_limit_value)))+"°C").c_str();
+                    - lvgl.widget.redraw:
+                        id: sensor_limit_slider
+                    - lvgl.page.show: sensor_limits_page
               - arc:
                   id: sensor4_limit_arc
                   min_value: 1
@@ -1288,7 +1391,7 @@ lvgl:
 
         # symbol for gas low warning
         - label:
-            id: g32_warning_label
+            id: gas_warning_label
             x: 300
             y: 4
             text_font: MONTSERRAT_18
@@ -1301,13 +1404,13 @@ lvgl:
           # time string hours:minutes
         - label:
             id: display_time
-            x: 200
+            x: 190
             y: 4
             text_font: MONTSERRAT_20
             text_color: 0xffffff
             text_align: CENTER
-            width: 80
-            text: "00:00"
+            width: 100
+            text: "00:00:00"
             hidden: true
 
     # main page with numbers
@@ -1315,16 +1418,24 @@ lvgl:
       pad_all: 0
       on_swipe_left:
         then:
-          - lambda: 'lv_indev_wait_release(lv_indev_get_act());'
-          - lvgl.page.next:
-              animation: OUT_LEFT
-              time: 600ms
+          if:
+            condition:
+              lambda: 'return id(show_arcs_page) == true;'
+            then:
+              - lambda: 'lv_indev_wait_release(lv_indev_get_act());'
+              - lvgl.page.next:
+                  animation: OUT_LEFT
+                  time: 600ms
       on_swipe_right:
         then:
-          - lambda: 'lv_indev_wait_release(lv_indev_get_act());'
-          - lvgl.page.previous:
-              animation: OUT_RIGHT
-              time: 600ms
+          if:
+            condition:
+              lambda: 'return id(show_arcs_page) == true;'
+            then:
+              - lambda: 'lv_indev_wait_release(lv_indev_get_act());'
+              - lvgl.page.next:
+                  animation: OUT_RIGHT
+                  time: 600ms
       widgets:
         # one common headline for all zones
         - label:
@@ -1340,26 +1451,6 @@ lvgl:
             x: 6
             y: 28
             styles: zone_obj_style
-            clickable: ${Enable_Temperature_Limits}
-            on_click:
-              - lambda: |-
-                  id(page_index) = 2;
-                  id(sensor_index) = 1;
-                  id(sensor_max_value) = 500;
-                  id(sensor_limit_value) = id(zone1_limit_value);
-                  lv_slider_set_range(sensor_limit_slider, 0, 500);
-                  lv_slider_set_value(sensor_limit_slider, id(zone1_limit_value), LV_ANIM_OFF );
-              - lvgl.label.update:
-                  id: sensor_limit_headline_label
-                  text: !lambda |-
-                    return "${Zone_Text}1 Temperaturlimit";
-              - lvgl.label.update:
-                  id: sensor_limit_label
-                  text: !lambda |-
-                    return (to_string(static_cast<int>(id(zone1_limit_value)))+"°C").c_str();
-              - lvgl.widget.redraw:
-                  id: sensor_limit_slider
-              - lvgl.page.show: sensor_limits_page
             widgets:
               - line:
                   points:
@@ -1378,7 +1469,7 @@ lvgl:
               - label:
                   id: zone1_label2
                   x: 0
-                  y: 6
+                  y: 8
                   width: 100
                   text_font: MONTSERRAT_34
                   text_color: !lambda |-
@@ -1387,12 +1478,35 @@ lvgl:
                       } else {
                       return lv_color_hex(0xff0000); // red
                     }
-                  text:  !lambda |-
-                    return (to_string(static_cast<int>(id(zone1_value)))).c_str();
+                  text: !lambda |-
+                    if( id(zone3_value) < 1500) {return (to_string(static_cast<int>(id(zone1_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+                  clickable: ${Enable_Temperature_Limits}
+                  on_click:
+                    - lambda: |-
+                        id(page_index) = 2;
+                        id(sensor_index) = 1;
+                        id(sensor_max_value) = 500;
+                        id(sensor_limit_value) = id(zone1_limit_value);
+                        lv_slider_set_range(sensor_limit_slider, 0, 500);
+                        lv_slider_set_value(sensor_limit_slider, id(zone1_limit_value), LV_ANIM_OFF );
+                    - lvgl.label.update:
+                        id: sensor_limit_headline_label
+                        text: !lambda |-
+                          return "${Zone_Text}1 Temperaturlimit";
+                    - lvgl.label.update:
+                        id: sensor_limit_label
+                        text: !lambda |-
+                          return (to_string(static_cast<int>(id(zone1_limit_value)))+"°C").c_str();
+                    - lvgl.widget.redraw:
+                        id: sensor_limit_slider
+                    - lvgl.page.show: sensor_limits_page
               - label:
                   id: zone1_limit_label2
                   x: 0
-                  y: 60
+                  y: 64
                   width: 100
                   text_font: MONTSERRAT_24
                   text_color: ${Limit_text_Color}
@@ -1409,26 +1523,6 @@ lvgl:
             x: 126
             y: 28
             styles: zone_obj_style
-            clickable: ${Enable_Temperature_Limits}
-            on_click:
-              - lambda: |-
-                  id(page_index) = 2;
-                  id(sensor_index) = 2;
-                  id(sensor_max_value) = 500;
-                  id(sensor_limit_value) = id(zone2_limit_value);
-                  lv_slider_set_range(sensor_limit_slider, 0, 500);
-                  lv_slider_set_value(sensor_limit_slider, id(zone2_limit_value), LV_ANIM_OFF );
-              - lvgl.label.update:
-                  id: sensor_limit_headline_label
-                  text: !lambda |-
-                    return "${Zone_Text}2 Temperaturlimit";
-              - lvgl.label.update:
-                  id: sensor_limit_label
-                  text: !lambda |-
-                    return (to_string(static_cast<int>(id(zone2_limit_value)))+"°C").c_str();
-              - lvgl.widget.redraw:
-                  id: sensor_limit_slider
-              - lvgl.page.show: sensor_limits_page
             widgets:
               - line:
                   points:
@@ -1447,7 +1541,7 @@ lvgl:
               - label:
                   id: zone2_label2
                   x: 0
-                  y: 6
+                  y: 8
                   width: 100
                   text_font: MONTSERRAT_34
                   text_color: !lambda |-
@@ -1456,12 +1550,35 @@ lvgl:
                       } else {
                       return lv_color_hex(0xff0000); // red
                     }
-                  text:  !lambda |-
-                    return (to_string(static_cast<int>(id(zone2_value)))).c_str();
+                  text: !lambda |-
+                    if( id(zone3_value) < 1500) {return (to_string(static_cast<int>(id(zone2_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+                  clickable: ${Enable_Temperature_Limits}
+                  on_click:
+                    - lambda: |-
+                        id(page_index) = 2;
+                        id(sensor_index) = 2;
+                        id(sensor_max_value) = 500;
+                        id(sensor_limit_value) = id(zone2_limit_value);
+                        lv_slider_set_range(sensor_limit_slider, 0, 500);
+                        lv_slider_set_value(sensor_limit_slider, id(zone2_limit_value), LV_ANIM_OFF );
+                    - lvgl.label.update:
+                        id: sensor_limit_headline_label
+                        text: !lambda |-
+                          return "${Zone_Text}2 Temperaturlimit";
+                    - lvgl.label.update:
+                        id: sensor_limit_label
+                        text: !lambda |-
+                          return (to_string(static_cast<int>(id(zone2_limit_value)))+"°C").c_str();
+                    - lvgl.widget.redraw:
+                        id: sensor_limit_slider
+                    - lvgl.page.show: sensor_limits_page
               - label:
                   id: zone2_limit_label2
                   x: 0
-                  y: 60
+                  y: 64
                   width: 100
                   text_font: MONTSERRAT_24
                   text_color: ${Limit_text_Color}
@@ -1478,26 +1595,6 @@ lvgl:
             x: 246
             y: 28
             styles: zone_obj_style
-            clickable: ${Enable_Temperature_Limits}
-            on_click:
-              - lambda: |-
-                  id(page_index) = 2;
-                  id(sensor_index) = 3;
-                  id(sensor_max_value) = 500;
-                  id(sensor_limit_value) = id(zone3_limit_value);
-                  lv_slider_set_range(sensor_limit_slider, 0, 500);
-                  lv_slider_set_value(sensor_limit_slider, id(zone3_limit_value), LV_ANIM_OFF );
-              - lvgl.label.update:
-                  id: sensor_limit_headline_label
-                  text: !lambda |-
-                    return "${Zone_Text}3 Temperaturlimit";
-              - lvgl.label.update:
-                  id: sensor_limit_label
-                  text: !lambda |-
-                    return (to_string(static_cast<int>(id(zone3_limit_value)))+"°C").c_str();
-              - lvgl.widget.redraw:
-                  id: sensor_limit_slider
-              - lvgl.page.show: sensor_limits_page
             widgets:
               - line:
                   points:
@@ -1516,7 +1613,7 @@ lvgl:
               - label:
                   id: zone3_label2
                   x: 0
-                  y: 6
+                  y: 8
                   width: 100
                   text_font: MONTSERRAT_34
                   text_color: !lambda |-
@@ -1525,12 +1622,35 @@ lvgl:
                       } else {
                       return lv_color_hex(0xff0000); // red
                     }
-                  text:  !lambda |-
-                    return (to_string(static_cast<int>(id(zone3_value)))).c_str();
+                  text: !lambda |-
+                    if( id(zone3_value) < 1500) {return (to_string(static_cast<int>(id(zone3_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+                  clickable: ${Enable_Temperature_Limits}
+                  on_click:
+                    - lambda: |-
+                        id(page_index) = 2;
+                        id(sensor_index) = 3;
+                        id(sensor_max_value) = 500;
+                        id(sensor_limit_value) = id(zone3_limit_value);
+                        lv_slider_set_range(sensor_limit_slider, 0, 500);
+                        lv_slider_set_value(sensor_limit_slider, id(zone3_limit_value), LV_ANIM_OFF );
+                    - lvgl.label.update:
+                        id: sensor_limit_headline_label
+                        text: !lambda |-
+                          return "${Zone_Text}3 Temperaturlimit";
+                    - lvgl.label.update:
+                        id: sensor_limit_label
+                        text: !lambda |-
+                          return (to_string(static_cast<int>(id(zone3_limit_value)))+"°C").c_str();
+                    - lvgl.widget.redraw:
+                        id: sensor_limit_slider
+                    - lvgl.page.show: sensor_limits_page
               - label:
                   id: zone3_limit_label2
                   x: 0
-                  y: 60
+                  y: 64
                   width: 100
                   text_font: MONTSERRAT_24
                   text_color: ${Limit_text_Color}
@@ -1547,26 +1667,6 @@ lvgl:
             x: 366
             y: 28
             styles: zone_obj_style
-            clickable: ${Enable_Temperature_Limits}
-            on_click:
-              - lambda: |-
-                  id(page_index) = 2;
-                  id(sensor_index) = 4;
-                  id(sensor_max_value) = 500;
-                  id(sensor_limit_value) = id(zone4_limit_value);
-                  lv_slider_set_range(sensor_limit_slider, 0, 500);
-                  lv_slider_set_value(sensor_limit_slider, id(zone4_limit_value), LV_ANIM_OFF );
-              - lvgl.label.update:
-                  id: sensor_limit_headline_label
-                  text: !lambda |-
-                    return "${Zone_Text}4 Temperaturlimit";
-              - lvgl.label.update:
-                  id: sensor_limit_label
-                  text: !lambda |-
-                    return (to_string(static_cast<int>(id(zone4_limit_value)))+"°C").c_str();
-              - lvgl.widget.redraw:
-                  id: sensor_limit_slider
-              - lvgl.page.show: sensor_limits_page
             widgets:
               - line:
                   points:
@@ -1585,7 +1685,7 @@ lvgl:
               - label:
                   id: zone4_label2
                   x: 0
-                  y: 6
+                  y: 8
                   width: 100
                   text_font: MONTSERRAT_34
                   text_color: !lambda |-
@@ -1594,12 +1694,35 @@ lvgl:
                       } else {
                       return lv_color_hex(0xff0000); // red
                     }
-                  text:  !lambda |-
-                    return (to_string(static_cast<int>(id(zone4_value)))).c_str();
+                  text: !lambda |-
+                    if( id(zone3_value) < 1500) {return (to_string(static_cast<int>(id(zone4_value)))).c_str();
+                    } else {
+                      return ("---");
+                    }
+                  clickable: ${Enable_Temperature_Limits}
+                  on_click:
+                    - lambda: |-
+                        id(page_index) = 2;
+                        id(sensor_index) = 4;
+                        id(sensor_max_value) = 500;
+                        id(sensor_limit_value) = id(zone4_limit_value);
+                        lv_slider_set_range(sensor_limit_slider, 0, 500);
+                        lv_slider_set_value(sensor_limit_slider, id(zone4_limit_value), LV_ANIM_OFF );
+                    - lvgl.label.update:
+                        id: sensor_limit_headline_label
+                        text: !lambda |-
+                          return "${Zone_Text}4 Temperaturlimit";
+                    - lvgl.label.update:
+                        id: sensor_limit_label
+                        text: !lambda |-
+                          return (to_string(static_cast<int>(id(zone4_limit_value)))+"°C").c_str();
+                    - lvgl.widget.redraw:
+                        id: sensor_limit_slider
+                    - lvgl.page.show: sensor_limits_page
               - label:
                   id: zone4_limit_label2
                   x: 0
-                  y: 60
+                  y: 64
                   width: 100
                   text_font: MONTSERRAT_24
                   text_color: ${Limit_text_Color}
@@ -1655,7 +1778,6 @@ lvgl:
             x: 10
             y: 172
             styles: sensor_obj_style
-            clickable: ${Enable_Temperature_Limits}
             hidden: !lambda |-
               if( (id(sensor1_value) < 1500) || (id(sensor1_limit_value) > 0) || (id(hide_inactive_sensors) == false) ) {
                 id(active_sensors) |= 0x01;
@@ -1664,25 +1786,6 @@ lvgl:
                 id(active_sensors) &= ~0x01;
                 return true;
               }
-            on_click:
-              - lambda: |-
-                  id(page_index) = 2;
-                  id(sensor_index) = 5;
-                  id(sensor_max_value) = ${Sensor1_Max};
-                  id(sensor_limit_value) = id(sensor1_limit_value);
-                  lv_slider_set_range(sensor_limit_slider, 0, ${Sensor1_Max});
-                  lv_slider_set_value(sensor_limit_slider, id(sensor1_limit_value), LV_ANIM_OFF );
-              - lvgl.label.update:
-                  id: sensor_limit_headline_label
-                  text: !lambda |-
-                    return "${Sensor_Text}1 Temperaturlimit";
-              - lvgl.label.update:
-                  id: sensor_limit_label
-                  text: !lambda |-
-                    return (to_string(static_cast<int>(id(sensor1_limit_value)))+"°C").c_str();
-              - lvgl.widget.redraw:
-                  id: sensor_limit_slider
-              - lvgl.page.show: sensor_limits_page
             widgets:
               - line:
                   points:
@@ -1701,7 +1804,7 @@ lvgl:
               - label:
                   id: sensor1_label2
                   x: 0
-                  y: 6
+                  y: 8
                   width: 100
                   text_font: MONTSERRAT_34
                   text: !lambda |-
@@ -1716,10 +1819,30 @@ lvgl:
                     } else {
                       return lv_color_hex(0xff0000); // Red
                     }
+                  clickable: ${Enable_Temperature_Limits}
+                  on_click:
+                    - lambda: |-
+                        id(page_index) = 2;
+                        id(sensor_index) = 5;
+                        id(sensor_max_value) = ${Sensor1_Max};
+                        id(sensor_limit_value) = id(sensor1_limit_value);
+                        lv_slider_set_range(sensor_limit_slider, 0, ${Sensor1_Max});
+                        lv_slider_set_value(sensor_limit_slider, id(sensor1_limit_value), LV_ANIM_OFF );
+                    - lvgl.label.update:
+                        id: sensor_limit_headline_label
+                        text: !lambda |-
+                          return "${Sensor_Text}1 Temperaturlimit";
+                    - lvgl.label.update:
+                        id: sensor_limit_label
+                        text: !lambda |-
+                          return (to_string(static_cast<int>(id(sensor1_limit_value)))+"°C").c_str();
+                    - lvgl.widget.redraw:
+                        id: sensor_limit_slider
+                    - lvgl.page.show: sensor_limits_page
               - label:
                   id: sensor1_limit_label2
                   x: 0
-                  y: 60
+                  y: 64
                   width: 100
                   text_font: MONTSERRAT_24
                   text_color: ${Limit_text_Color}
@@ -1736,7 +1859,6 @@ lvgl:
             x: 128
             y: 172
             styles: sensor_obj_style
-            clickable: true
             hidden: !lambda |-
               if( (id(sensor2_value) < 1500) || (id(sensor2_limit_value) > 0) || (id(hide_inactive_sensors) == false) ) {
                 id(active_sensors) |= 0x02;
@@ -1745,25 +1867,6 @@ lvgl:
                 id(active_sensors) &= ~0x02;
                 return true;
               }
-            on_click:
-              - lambda: |-
-                  id(page_index) = 2;
-                  id(sensor_index) = 6;
-                  id(sensor_max_value) = ${Sensor2_Max};
-                  id(sensor_limit_value) = id(sensor2_limit_value);
-                  lv_slider_set_range(sensor_limit_slider, 0, ${Sensor2_Max});
-                  lv_slider_set_value(sensor_limit_slider, id(sensor2_limit_value), LV_ANIM_OFF );
-              - lvgl.label.update:
-                  id: sensor_limit_headline_label
-                  text: !lambda |-
-                    return "${Sensor_Text}2 Temperaturlimit";
-              - lvgl.label.update:
-                  id: sensor_limit_label
-                  text: !lambda |-
-                    return (to_string(static_cast<int>(id(sensor2_limit_value)))+"°C").c_str();
-              - lvgl.widget.redraw:
-                  id: sensor_limit_slider
-              - lvgl.page.show: sensor_limits_page
             widgets:
               - line:
                   points:
@@ -1782,7 +1885,7 @@ lvgl:
               - label:
                   id: sensor2_label2
                   x: 0
-                  y: 6
+                  y: 8
                   width: 100
                   text_font: MONTSERRAT_34
                   text: !lambda |-
@@ -1797,10 +1900,30 @@ lvgl:
                     } else {
                       return lv_color_hex(0xff0000); // Red
                     }
+                  clickable: true
+                  on_click:
+                    - lambda: |-
+                        id(page_index) = 2;
+                        id(sensor_index) = 6;
+                        id(sensor_max_value) = ${Sensor2_Max};
+                        id(sensor_limit_value) = id(sensor2_limit_value);
+                        lv_slider_set_range(sensor_limit_slider, 0, ${Sensor2_Max});
+                        lv_slider_set_value(sensor_limit_slider, id(sensor2_limit_value), LV_ANIM_OFF );
+                    - lvgl.label.update:
+                        id: sensor_limit_headline_label
+                        text: !lambda |-
+                          return "${Sensor_Text}2 Temperaturlimit";
+                    - lvgl.label.update:
+                        id: sensor_limit_label
+                        text: !lambda |-
+                          return (to_string(static_cast<int>(id(sensor2_limit_value)))+"°C").c_str();
+                    - lvgl.widget.redraw:
+                        id: sensor_limit_slider
+                    - lvgl.page.show: sensor_limits_page
               - label:
                   id: sensor2_limit_label2
                   x: 0
-                  y: 60
+                  y: 64
                   width: 100
                   text_font: MONTSERRAT_24
                   text_color: ${Limit_text_Color}
@@ -1817,7 +1940,6 @@ lvgl:
             x: 244
             y: 172
             styles: sensor_obj_style
-            clickable: true
             hidden: !lambda |-
               if( (id(sensor3_value) < 1500) || (id(sensor3_limit_value) > 0) || (id(hide_inactive_sensors) == false) ) {
                 id(active_sensors) |= 0x04;
@@ -1826,25 +1948,6 @@ lvgl:
                 id(active_sensors) &= ~0x04;
                 return true;
               }
-            on_click:
-              - lambda: |-
-                  id(page_index) = 2;
-                  id(sensor_index) = 7;
-                  id(sensor_max_value) = ${Sensor3_Max};
-                  id(sensor_limit_value) = id(sensor3_limit_value);
-                  lv_slider_set_range(sensor_limit_slider, 0, ${Sensor3_Max});
-                  lv_slider_set_value(sensor_limit_slider, id(sensor3_limit_value), LV_ANIM_OFF );
-              - lvgl.label.update:
-                  id: sensor_limit_headline_label
-                  text: !lambda |-
-                    return "${Sensor_Text}3 Temperaturlimit";
-              - lvgl.label.update:
-                  id: sensor_limit_label
-                  text: !lambda |-
-                    return (to_string(static_cast<int>(id(sensor3_limit_value)))+"°C").c_str();
-              - lvgl.widget.redraw:
-                  id: sensor_limit_slider
-              - lvgl.page.show: sensor_limits_page
             widgets:
               - line:
                   points:
@@ -1863,7 +1966,7 @@ lvgl:
               - label:
                   id: sensor3_label2
                   x: 0
-                  y: 6
+                  y: 8
                   width: 100
                   text_font: MONTSERRAT_34
                   text: !lambda |-
@@ -1878,10 +1981,30 @@ lvgl:
                     } else {
                       return lv_color_hex(0xff0000); // Red
                     }
+                  clickable: true
+                  on_click:
+                    - lambda: |-
+                        id(page_index) = 2;
+                        id(sensor_index) = 7;
+                        id(sensor_max_value) = ${Sensor3_Max};
+                        id(sensor_limit_value) = id(sensor3_limit_value);
+                        lv_slider_set_range(sensor_limit_slider, 0, ${Sensor3_Max});
+                        lv_slider_set_value(sensor_limit_slider, id(sensor3_limit_value), LV_ANIM_OFF );
+                    - lvgl.label.update:
+                        id: sensor_limit_headline_label
+                        text: !lambda |-
+                          return "${Sensor_Text}3 Temperaturlimit";
+                    - lvgl.label.update:
+                        id: sensor_limit_label
+                        text: !lambda |-
+                          return (to_string(static_cast<int>(id(sensor3_limit_value)))+"°C").c_str();
+                    - lvgl.widget.redraw:
+                        id: sensor_limit_slider
+                    - lvgl.page.show: sensor_limits_page
               - label:
                   id: sensor3_limit_label2
                   x: 0
-                  y: 60
+                  y: 64
                   width: 100
                   text_font: MONTSERRAT_24
                   text_color: ${Limit_text_Color}
@@ -1898,7 +2021,6 @@ lvgl:
             x: 362
             y: 172
             styles: sensor_obj_style
-            clickable: true
             hidden: !lambda |-
               if( (id(sensor4_value) < 1500) || (id(sensor4_limit_value) > 0) || (id(hide_inactive_sensors) == false) ) {
                 id(active_sensors) |= 0x08;
@@ -1907,25 +2029,6 @@ lvgl:
                 id(active_sensors) &= ~0x08;
                 return true;
               }
-            on_click:
-              - lambda: |-
-                  id(page_index) = 2;
-                  id(sensor_index) = 8;
-                  id(sensor_max_value) = ${Sensor4_Max};
-                  id(sensor_limit_value) = id(sensor4_limit_value);
-                  lv_slider_set_range(sensor_limit_slider, 0, ${Sensor4_Max});
-                  lv_slider_set_value(sensor_limit_slider, id(sensor4_limit_value), LV_ANIM_OFF );
-              - lvgl.label.update:
-                  id: sensor_limit_headline_label
-                  text: !lambda |-
-                    return "${Sensor_Text}4 Temperaturlimit";
-              - lvgl.label.update:
-                  id: sensor_limit_label
-                  text: !lambda |-
-                    return (to_string(static_cast<int>(id(sensor4_limit_value)))+"°C").c_str();
-              - lvgl.widget.redraw:
-                  id: sensor_limit_slider
-              - lvgl.page.show: sensor_limits_page
             widgets:
               - line:
                   points:
@@ -1944,7 +2047,7 @@ lvgl:
               - label:
                   id: sensor4_label2
                   x: 0
-                  y: 6
+                  y: 8
                   width: 100
                   text_font: MONTSERRAT_34
                   text: !lambda |-
@@ -1959,10 +2062,30 @@ lvgl:
                     } else {
                       return lv_color_hex(0xff0000); // Red
                     }
+                  clickable: true
+                  on_click:
+                    - lambda: |-
+                        id(page_index) = 2;
+                        id(sensor_index) = 8;
+                        id(sensor_max_value) = ${Sensor4_Max};
+                        id(sensor_limit_value) = id(sensor4_limit_value);
+                        lv_slider_set_range(sensor_limit_slider, 0, ${Sensor4_Max});
+                        lv_slider_set_value(sensor_limit_slider, id(sensor4_limit_value), LV_ANIM_OFF );
+                    - lvgl.label.update:
+                        id: sensor_limit_headline_label
+                        text: !lambda |-
+                          return "${Sensor_Text}4 Temperaturlimit";
+                    - lvgl.label.update:
+                        id: sensor_limit_label
+                        text: !lambda |-
+                          return (to_string(static_cast<int>(id(sensor4_limit_value)))+"°C").c_str();
+                    - lvgl.widget.redraw:
+                        id: sensor_limit_slider
+                    - lvgl.page.show: sensor_limits_page
               - label:
                   id: sensor4_limit_label2
                   x: 0
-                  y: 60
+                  y: 64
                   width: 100
                   text_font: MONTSERRAT_24
                   text_color: ${Limit_text_Color}
@@ -2129,7 +2252,7 @@ lvgl:
 
         # symbol for gas low warning
         - label:
-            id: g32_warning_label2
+            id: gas_warning_label2
             x: 300
             y: 4
             text_font: MONTSERRAT_18
@@ -2142,13 +2265,13 @@ lvgl:
         # time string hours:minutes
         - label:
             id: display_time2
-            x: 200
+            x: 190
             y: 4
             text_font: MONTSERRAT_20
             text_color: 0xffffff
             text_align: CENTER
-            width: 80
-            text: "00:00"
+            width: 100
+            text: "00:00:00"
             hidden: true
 
 
@@ -2471,7 +2594,6 @@ sensor:
       - lvgl.widget.refresh: zone1_label
       - lvgl.widget.refresh: zone1_arc
       - lvgl.widget.refresh: zone1_label2
-      - lvgl.widget.hide: boot_screen
 
   - platform: homeassistant
     entity_id: 'sensor.${g32_nickname}_zone_2'
@@ -2640,6 +2762,8 @@ binary_sensor:
     entity_id: 'binary_sensor.${g32_nickname}_gas_low'
     id: g32_gas_low
     name: "G32 Gasbuddy Füllstand niedrig"
+    internal: true
+    trigger_on_initial_state: true
     on_state:
       then:
       - lvgl.bar.update:
@@ -2660,11 +2784,19 @@ binary_sensor:
               } else {
                 return lv_color_hex(${Gas_Bar_Color2});
               }
+      - lvgl.label.update:
+          id: gas_warning_label
+          hidden: !lambda return(!x);
+      - lvgl.label.update:
+          id: gas_warning_label2
+          hidden: !lambda return(!x);
 
   - platform: homeassistant
     entity_id: 'binary_sensor.${g32_nickname}_firebox_open'
     id: g32_firebox_open
     name: "G32 Haube offen"
+    internal: true
+    trigger_on_initial_state: true
     on_state:
       then:
       - lvgl.label.update:
@@ -2678,6 +2810,8 @@ binary_sensor:
     entity_id: 'binary_sensor.${g32_nickname}_light_on'
     id: g32_light_on
     name: "G32 Licht an"
+    internal: true
+    trigger_on_initial_state: true
     on_state:
       then:
       - lvgl.label.update:
@@ -2694,15 +2828,15 @@ script:
           id: display_time
           text: !lambda |-
             static char time_buf[16];
-            auto now = id(sntp_time).now();
-            snprintf(time_buf, sizeof(time_buf), "%02d:%02d", now.hour, now.minute);
+            auto now = id(ha_time).now();
+            snprintf(time_buf, sizeof(time_buf), "%02d:%02d:%02d", now.hour, now.minute, now.second);
             return time_buf;
       - lvgl.label.update:
           id: display_time2
           text: !lambda |-
             static char time_buf[16];
-            auto now = id(sntp_time).now();
-            snprintf(time_buf, sizeof(time_buf), "%02d:%02d", now.hour, now.minute);
+            auto now = id(ha_time).now();
+            snprintf(time_buf, sizeof(time_buf), "%02d:%02d:%02d", now.hour, now.minute, now.second);
             return time_buf;
       - lvgl.label.update:
           id: display_time
