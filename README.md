@@ -94,6 +94,7 @@ Die Konfiguration bietet zahlreiche Optionen zur **Personalisierung des Displays
   * **`SensorX_Max`**: Passen Sie die maximalen Werte für die Sensortemperaturkreise an, z.B. 130°C für Kerntemperaturen oder 300°C für Garraumtemperaturen.
   * **`Beeper_Max`** und **`Beeper_interval`**: Stellen Sie die Lautstärke und das Alarmintervall des Beeper ein.
   * **`Show_Time`**: Aktivieren oder deaktivieren Sie die Anzeige der Uhrzeit in der Statusleiste.
+  * **`Show_Arcs_Page, Show_Numbers_Page`**: Ativieren oder deaktivieren Sie die Anzeige der beiden verfügbaren Pages (Arcs = bunte Kreisbögen, Numbers = graue Zahlen)
 
 -----
 
