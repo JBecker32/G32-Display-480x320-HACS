@@ -1,6 +1,6 @@
 # ESPHome G32 Grill Monitor Display
 
-Dieses ESPHome-Projekt verwandelt ein JC3248W535C Touchscreen-Display in einen hochentwickelten Monitor für Ihren Otto Wilde G32 Grill. Es verbindet sich direkt über Bluetooth (BLE) mit dem Grill, um Echtzeitdaten abzurufen und bietet eine reichhaltige, über LVGL erstellte Benutzeroberfläche zur Visualisierung aller wichtigen Grillinformationen.
+Dieses ESPHome-Projekt verwandelt ein JC3248W535C Touchscreen-Display in einen hochentwickelten Monitor für Ihren Otto Wilde G32 Grill. Es verbindet sich über eine HACS-Integration in Home Assistant mit dem Grill, um Echtzeitdaten abzurufen und bietet eine reichhaltige, über LVGL erstellte Benutzeroberfläche zur Visualisierung aller wichtigen Grillinformationen.
 
 Die Benutzeroberfläche ist in zwei Hauptansichten unterteilt, zwischen denen durch Wischen (Swipen) gewechselt werden kann:
 1.  **Arc-Ansicht:** Eine farbenfrohe, grafische Darstellung der Temperaturen mit kreisförmigen Bögen.
@@ -65,7 +65,6 @@ Passen Sie die folgenden Variablen in der YAML-Datei an:
 | Variable | Beispielwert | Beschreibung |
 | :--- | :--- | :--- |
 | `name` | `g32-display-bt` | Der Name Ihres Geräts, wie er in ESPHome und Home Assistant angezeigt wird. Keine Leer- oder Sonderzeichen. |
-| `g32_mac_address` | `94:E6:86:xx:yy:zz`| **WICHTIG:** Die Bluetooth-MAC-Adresse Ihres G32 Grills. (Siehe Hinweis unten) |
 | `wifi_ssid` | `!secret wifi_ssid` | Der Name (SSID) Ihres WLAN-Netzwerks. |
 | `wifi_password` | `!secret wifi_password` | Das Passwort für Ihr WLAN-Netzwerk. |
 | `api_encryption_key` | `"E1f...U6k="` | Der Verschlüsselungsschlüssel aus dem in Schritt 1 erstellten ESPHome-Gerät. |
@@ -86,14 +85,6 @@ Passen Sie die folgenden Variablen in der YAML-Datei an:
 | `Show_Arcs_Page` | `'true'` | Legt fest, ob die grafische "Arc"-Seite angezeigt werden soll. |
 | `Show_Numbers_Page`| `'true'` | Legt fest, ob die "Zahlen"-Seite angezeigt werden soll. |
 
-> **💡 So finden Sie die MAC-Adresse Ihres Grills:**
-> Wenn Sie die MAC-Adresse Ihres G32 nicht kennen, können Sie sie mit diesem Projekt selbst finden.
-> 1.  Entfernen Sie die Kommentarzeichen (`#`) vor den Zeilen des `esp32_ble_tracker:` in der YAML-Datei.
-> 2.  Installieren Sie die Firmware auf Ihrem ESP32.
-> 3.  Öffnen Sie die "Logs" für das Gerät im ESPHome-Dashboard.
-> 4.  Schalten Sie Ihren G32 Grill ein. In den Logs sollte eine Meldung erscheinen, die mit "G32 gefunden" beginnt und die MAC-Adresse anzeigt.
-> 5.  Kopieren Sie diese Adresse in das Feld `g32_mac_address`.
-> 6.  Kommentieren Sie den `esp32_ble_tracker:`-Block wieder aus, um Ressourcen zu sparen.
 
 ## 🕹️ Bedienung
 
