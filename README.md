@@ -1,114 +1,112 @@
-# ESPHome G32 Grill-Display (owg-g32-ha-jc3248w535-arcs-numbers)
+Absolut! Hier ist ein umfassender README.md-Entwurf, der auf der von Ihnen bereitgestellten YAML-Datei basiert. Er ist für die Verwendung auf GitHub strukturiert und enthält Erklärungen zu Konfiguration, Hardware und Funktionen.
 
-Diese ESPHome-Konfiguration verwandelt ein ESP32-basiertes Display in eine **interaktive Überwachungseinheit für Ihren OW G32 Grill**. Sie bietet Echtzeit-Temperaturanzeigen für Zonen und Sensoren, Gasfüllstandsanzeigen, anpassbare Alarme und eine benutzerfreundliche Oberfläche.
+---
 
------
+# ESPHome G32 Grill Monitor Display
 
-## Funktionen
+Dieses ESPHome-Projekt verwandelt ein ESP32-S3-Touchscreen-Display in einen hochentwickelten Monitor für Ihren Otto Wilde G32 Grill. Es verbindet sich direkt über Bluetooth (BLE) mit dem Grill, um Echtzeitdaten abzurufen und bietet eine reichhaltige, über LVGL erstellte Benutzeroberfläche zur Visualisierung aller wichtigen Grillinformationen.
 
-  * **Anpassbare Bezeichnungen**: Legen Sie eigene Namen für Zonen und Sensoren fest (z.B. "Zone 1", "Sensor 1").
-  * **Farbkodierte Temperaturanzeigen**: Visualisieren Sie Temperaturen und Grenzwerte mit anpassbaren Farben für die Kreisbögen und Texte.
-  * **Gasfüllstandsanzeige**: Überwachen Sie den Gasfüllstand mit einem farbkodierten Balken, der bei niedrigem Stand die Farbe ändert.
-  * **Temperaturgrenzwerte**: Setzen und verwalten Sie individuelle Temperaturgrenzwerte für jede Zone und jeden Sensor direkt auf dem Display.
-  * **Akku-Überwachung**: Das Batteriesymbol wird angezeigt, wenn der Ladezustand unter einen konfigurierbaren Wert fällt.
-  * **Ausblenden inaktiver Sensoren**: Option zum Ausblenden von Sensoren, die keine Daten liefern.
-  * **Akustische Alarme**: Unterschiedliche Sirenengeräusche warnen Sie, wenn Zonen- oder Sensortemperaturgrenzwerte überschritten werden.
-  * **Einstellbarer Bildschirm-Timeout**: Konfigurieren Sie, wann das Display in den Ruhezustand wechseln soll, um Energie zu sparen.
-  * **Uhrzeitanzeige**: Optionale Anzeige der aktuellen Uhrzeit in der Statusleiste.
-  * **WLAN-Konnektivität**: Verbindet sich mit Ihrem Heim-WLAN und bietet einen Fallback-Hotspot, falls die Verbindung fehlschlägt.
-  * **Over-The-Air (OTA) Updates**: Ermöglicht drahtlose Firmware-Updates.
+Die Benutzeroberfläche ist in zwei Hauptansichten unterteilt, zwischen denen durch Wischen (Swipen) gewechselt werden kann:
+1.  **Arc-Ansicht:** Eine farbenfrohe, grafische Darstellung der Temperaturen mit kreisförmigen Bögen.
+2.  **Zahlen-Ansicht:** Eine schlichte, zahlenbasierte Ansicht, die sich auf die wichtigsten Werte konzentriert.
 
------
 
-## Hardware
+## ✨ Features
 
-Diese Konfiguration ist für ein Display mit folgenden Komponenten optimiert:
+* **Echtzeit-Überwachung:** Zeigt Temperaturen für bis zu 4 Grillzonen und 4 externe Temperatursensoren an.
+* **Gas-Level-Anzeige:** Überwacht den Füllstand des Gasbuddy in Prozent und Gramm, inklusive einer visuellen Leiste.
+* **Temperaturalarme:** Setzen Sie individuelle Temperaturlimits für jede Zone und jeden Sensor. Bei Überschreitung wird ein akustischer Alarm über den integrierten Beeper ausgelöst.
+* **Zwei Display-Modi:** Wechseln Sie durch Wischen zwischen einer grafischen "Arc"-Ansicht und einer minimalistischen "Zahlen"-Ansicht.
+* **Status-Symbole:** Icons auf dem Display zeigen den Verbindungsstatus von WLAN und Bluetooth sowie den Zustand von Grillhaube und Licht an.
+* **Home Assistant Integration:** Nahtlose Einbindung in Home Assistant über die ESPHome API.
+* **Umfassend anpassbar:** Passen Sie Farben, Texte, Anzeigeelemente und Schwellenwerte direkt in der YAML-Datei an Ihre Wünsche an.
+* **Batterieüberwachung (Optional):** Zeigt den Ladezustand (SOC) eines optional angeschlossenen Akkus an.
+* **Fallback-WLAN:** Erstellt einen eigenen Access Point, falls die Verbindung zum primären WLAN fehlschlägt.
 
-  * **Guition JC3248W553C Display Einheit**
-  * **ESP32-S3-DevKitC-1**
-  * **QSPI-DBI Display** (Modell: axs15231) mit 480x320 Pixeln
-  * **GT911 Touchscreen**
+## 🛠️ Hardware-Voraussetzungen
 
------
+Dieses Projekt ist für eine bestimmte Kombination aus Mikrocontroller und Display konzipiert.
 
-## Erste Schritte
+* **Mikrocontroller:** Ein **ESP32-S3** Board (z.B. ESP32-S3-DevKitC-1). Das Projekt nutzt PSRAM, stellen Sie also sicher, dass Ihr Board damit ausgestattet ist.
+* **Display:** Ein **480x320 Pixel** LCD-Display mit einem **AXS15231** Controller und einer **QSPI**-Schnittstelle.
+* **Touchscreen:** Ein kapazitiver Touchscreen-Controller, der über **I2C** angebunden wird (z.B. GT911, kompatibel mit dem AXS15231).
+* **Beeper/Lautsprecher:** Ein kleiner Lautsprecher zur Ausgabe von Alarmtönen.
+* **(Optional) Akku:** Ein LiPo/Li-Ion-Akku zur mobilen Stromversorgung, dessen Spannung über einen Spannungsteiler an einen ADC-Pin geführt wird.
 
-1.  **Klonen Sie dieses Repository:**
+### Pinbelegung
 
-    ```bash
-    git clone https://de.wikipedia.org/wiki/Repository
-    cd [Name des Repositories]
-    ```
+Stellen Sie sicher, dass Ihre Hardware gemäß den folgenden Pins aus der Konfiguration verbunden ist:
 
-2.  **Passen Sie die Konfiguration an:**
-    Öffnen Sie die `substitutions:` Sektion in der `.yaml` Datei. Hier können Sie die Geräteeinstellungen, Wi-Fi-Anmeldeinformationen, API-Schlüssel und OTA-Passwörter anpassen.
+| Komponente | Pin-Name (Funktion) | ESP32-S3 Pin |
+| :--- | :--- | :--- |
+| **QSPI Display** | `clk_pin` | 47 |
+| | `data_pins` | [21, 48, 40, 39] |
+| | `cs_pin` | 45 |
+| **I2C Touch** | `sda` | 4 |
+| | `scl` | 8 |
+| **Backlight** | `gpio_backlight_pwm`| 1 |
+| **Beeper** | `rtttl_out` | 9 |
+| **Batterie-ADC** | `adc` | 5 |
 
-    ```yaml
-    # Name des ESPHome Geräts
-    name: g32-display
-    device_description: "Monitor an OW G32 grill"
-    g32_nickname: "elgrillo"
+## ⚙️ Installation & Konfiguration
 
-    # WLAN-Anmeldeinformationen (verwenden Sie secrets.yaml für die Produktion)
-    wifi_ssid: !secret wifi_ssid
-    wifi_password: !secret wifi_password
+### Voraussetzungen
+1. Eine laufende **Home Assistant** Instanz.
+2. **ESPHome** als Add-on in Home Assistant oder als eigenständige Installation.
 
-    # Home Assistant API-Verschlüsselungsschlüssel
-    api_encryption_key: "IHR_HOME_ASSISTANT_API_KEY_HIER"
+### Installationsschritte
 
-    # OTA-Passwort
-    ota_password: "IHR_OTA_PASSWORT_HIER"
+1.  **Neues Gerät in ESPHome erstellen:**
+    * Gehen Sie zum ESPHome Dashboard.
+    * Klicken Sie auf "+ NEW DEVICE" und folgen Sie den Anweisungen. Dies ist notwendig, um einen `api_encryption_key` und ein `ota_password` zu generieren. Notieren Sie sich diese Werte.
 
-    # WLAN-Fallback-Hotspot
-    ap_ssid: "G32 Display Fallback Hotspot"
-    ap_password: "IHR_AP_PASSWORT_HIER"
+2.  **YAML-Datei konfigurieren:**
+    * Laden Sie die Datei `G32_JC3248W535_ESPHome_V110d_both_BT.YAML` herunter und kopieren Sie sie in Ihr `/esphome`-Verzeichnis.
+    * Öffnen Sie die Datei und passen Sie den oberen `substitutions`-Abschnitt an Ihre Bedürfnisse an. Dies ist der einzige Bereich, den Sie bearbeiten müssen.
 
-    # ... weitere Anpassungen wie Texte, Farben, Sensormaximalwerte
-    ```
+3.  **Firmware kompilieren und hochladen:**
+    * **Erstes Flashen:** Verbinden Sie Ihr ESP32-S3-Board über USB mit dem Computer, auf dem ESPHome läuft. Klicken Sie im ESPHome-Dashboard auf "Install" und wählen Sie die USB-Option.
+    * **Zukünftige Updates:** Sobald das Gerät im Netzwerk ist, können Sie Updates drahtlos (OTA) durchführen, indem Sie auf "Install" und "Wirelessly" klicken.
 
-    **Wichtig**: Es wird dringend empfohlen, sensible Daten wie Wi-Fi-Passwörter und API-Schlüssel in einer `secrets.yaml`-Datei zu speichern, die sich im selben Verzeichnis wie Ihre ESPHome-Konfiguration befindet und nicht im Git-Repository veröffentlicht wird.
+### Benutzerkonfiguration (`substitutions`)
 
-3.  **Installieren Sie ESPHome:**
-    Wenn Sie ESPHome noch nicht installiert haben, folgen Sie der offiziellen Anleitung: [ESPHome Installation](https://www.google.com/search?q=https://esphome.io/guides/getting_started_yaml.html%23installing-esphome)
+Passen Sie die folgenden Variablen in der YAML-Datei an:
 
-4.  **Kompilieren und Flashen:**
-    Verwenden Sie die ESPHome CLI, um die Firmware zu kompilieren und auf Ihr Gerät hochzuladen:
+| Variable | Beispielwert | Beschreibung |
+| :--- | :--- | :--- |
+| `name` | `g32-display-bt` | Der Name Ihres Geräts, wie er in ESPHome und Home Assistant angezeigt wird. Keine Leer- oder Sonderzeichen. |
+| `g32_mac_address` | `94:E6:86:0A:27:52`| **WICHTIG:** Die Bluetooth-MAC-Adresse Ihres G32 Grills. (Siehe Hinweis unten) |
+| `wifi_ssid` | `!secret wifi_ssid` | Der Name (SSID) Ihres WLAN-Netzwerks. |
+| `wifi_password` | `!secret wifi_password` | Das Passwort für Ihr WLAN-Netzwerk. |
+| `api_encryption_key` | `"E1f...U6k="` | Der Verschlüsselungsschlüssel aus dem in Schritt 1 erstellten ESPHome-Gerät. |
+| `ota_password` | `"398...701a"` | Das Passwort für drahtlose Updates aus dem in Schritt 1 erstellten ESPHome-Gerät. |
+| `ap_ssid` | `"G32 Display..."`| Der Name des Fallback-WLAN-Hotspots. |
+| `ap_password` | `"4Lyt...DNh"` | Das Passwort für den Fallback-Hotspot. |
+| `Zone_Text` | `"Zone "` | Der Präfix-Text für die Grillzonen (ergibt "Zone 1", "Zone 2" usw.). |
+| `Sensor_Text` | `"Sensor "` | Der Präfix-Text für die externen Sensoren. |
+| `Zone_Arc_Color` | `"0xff0000"` | Farbe (Hex-Code) der Temperatur-Bögen für die Zonen. |
+| `Sensor_Arc_Color`| `"0xffff00"` | Farbe (Hex-Code) der Temperatur-Bögen für die Sensoren. |
+| `Hide_Battery_Symbol`| `'false'` | Setzen Sie auf `'true'`, wenn Sie kein Akku-Symbol anzeigen möchten. |
+| `Min_SOC` | `"25"` | Der Akku-Prozentsatz, unter dem das Symbol rot angezeigt wird. |
+| `Hide_Inactive_Sensors`| `'false'` | Setzen Sie auf `'true'`, um inaktive Sensoren komplett auszublenden. |
+| `Enable_Temperature_Limits`| `'true'` | Setzen Sie auf `'false'`, um die Funktion zum Setzen von Temperaturlimits zu deaktivieren. |
+| `Sensor1_Max` | `"130"` | Maximale einstellbare Temperatur für Sensor 1 (z.B. für Kerntemperatur). |
+| `Beeper_interval`| `"5s"` | Das Zeitintervall für Alarmmeldungen des Lautsprechers. |
+| `Show_Time` | `'true'` | Setzen Sie auf `'true'`, um die Uhrzeit (von Home Assistant synchronisiert) anzuzeigen. |
+| `Show_Arcs_Page` | `'true'` | Legt fest, ob die grafische "Arc"-Seite angezeigt werden soll. |
+| `Show_Numbers_Page`| `'true'` | Legt fest, ob die "Zahlen"-Seite angezeigt werden soll. |
 
-    ```bash
-    esphome run g32-display.yaml
-    ```
+> **💡 So finden Sie die MAC-Adresse Ihres Grills:**
+> Wenn Sie die MAC-Adresse Ihres G32 nicht kennen, können Sie sie mit diesem Projekt selbst finden.
+> 1.  Entfernen Sie die Kommentarzeichen (`#`) vor den Zeilen des `esp32_ble_tracker:` in der YAML-Datei.
+> 2.  Installieren Sie die Firmware auf Ihrem ESP32.
+> 3.  Öffnen Sie die "Logs" für das Gerät im ESPHome-Dashboard.
+> 4.  Schalten Sie Ihren G32 Grill ein. In den Logs sollte eine Meldung erscheinen, die mit "G32 gefunden" beginnt und die MAC-Adresse anzeigt.
+> 5.  Kopieren Sie diese Adresse in das Feld `g32_mac_address`.
+> 6.  Kommentieren Sie den `esp32_ble_tracker:`-Block wieder aus, um Ressourcen zu sparen.
 
-    Ersetzen Sie `g32-display.yaml` durch den tatsächlichen Namen Ihrer ESPHome-Konfigurationsdatei.
+## 🕹️ Bedienung
 
------
-
-## Anpassung
-
-Die Konfiguration bietet zahlreiche Optionen zur **Personalisierung des Displays**:
-
-  * **`Zone_Text`** und **`Sensor_Text`**: Ändern Sie die Präfixe für Ihre Zonen- und Sensorbezeichnungen. (nur noch im Limits Screen wirksam!)
-  * **Farbdefinitionen**: Passen Sie die Farben der Temperatur- und Gasbalken an. Die Farben werden im Hexadezimalformat `0xRRGGBB` angegeben.
-  * **`Min_SOC`**: Legen Sie den Prozentsatz fest, unter dem das Batteriesymbol angezeigt wird.
-  * **`Hide_Inactive_Sensors`**: Schalten Sie dies auf `true`, um Sensoren auszublenden, die keine gültigen Messwerte liefern.
-  * **`Enable_Temperature_Limits`**: Deaktivieren Sie dies, wenn Sie die Möglichkeit, Grenzwerte auf dem Display zu setzen, nicht benötigen.
-  * **`SensorX_Max`**: Passen Sie die maximalen Werte für die Sensortemperaturkreise an, z.B. 130°C für Kerntemperaturen oder 300°C für Garraumtemperaturen.
-  * **`Beeper_Max`** und **`Beeper_interval`**: Stellen Sie die Lautstärke und das Alarmintervall des Beeper ein.
-  * **`Show_Time`**: Aktivieren oder deaktivieren Sie die Anzeige der Uhrzeit in der Statusleiste.
-  * **`Show_Arcs_Page, Show_Numbers_Page`**: Ativieren oder deaktivieren Sie die Anzeige der beiden verfügbaren Pages (Arcs = bunte Kreisbögen, Numbers = graue Zahlen)
-
------
-
-## Fehlerbehebung
-
-  * **WLAN-Verbindungsprobleme**: Überprüfen Sie Ihre `wifi_ssid` und `wifi_password` in der Konfiguration oder in Ihrer `secrets.yaml`. Stellen Sie sicher, dass Ihr Gerät in Reichweite des WLAN-Netzwerks ist.
-  * **Display bleibt leer**: Überprüfen Sie die Verkabelung Ihres Displays und Touchscreens. Stellen Sie sicher, dass die `spi` und `i2c` Einstellungen korrekt sind.
-  * **Sensoren zeigen "---" an**: Dies deutet darauf hin, dass der Sensor keine gültigen Daten liefert (Wert \> 1500). Überprüfen Sie die Sensorverkabelung oder ob der Sensor korrekt erkannt wird.
-  * **Keine Alarme**: Stellen Sie sicher, dass der `Beeper_Max`-Wert über 0 liegt und dass die Temperaturgrenzwerte korrekt gesetzt sind und überschritten werden.
-
------
-
-## Mitwirken
-
-**Beiträge, Problemberichte und Feature-Anfragen sind willkommen\!** Bitte öffnen Sie ein Issue oder reichen Sie einen Pull Request ein.
-
------
+* **Seiten wechseln:** Wischen Sie auf dem Display nach links oder rechts, um zwischen der "Arc"-Ansicht und der "Zahlen"-Ansicht zu wechseln (sofern beide aktiviert sind).
+* **Temperaturlimit setzen:** Tippen Sie auf eine Temperaturanzeige (entweder in der Arc- oder der Zahlen-Ansicht). Es öffnet sich eine neue Seite, auf der Sie mit den Tasten `+` / `-` oder dem Schieberegler ein Temperaturlimit festlegen können. Bestätigen Sie mit "OK".
+* **Bildschirm aufwecken:** Wenn der Bildschirm nach der eingestellten Zeit in den Ruhezustand wechselt (Bildschirm aus), tippen Sie einfach einmal auf das Display, um ihn wieder zu aktivieren.
