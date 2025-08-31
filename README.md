@@ -27,21 +27,6 @@ Dieses Projekt ist für eine bestimmte Kombination aus Mikrocontroller und Displ
 * **(Optional) Beeper/Lautsprecher:** Ein kleiner passiver Piezo Beeper zur Ausgabe von Alarmtönen.
 * **(Optional) Akku:** Ein LiPo/Li-Ion-Akku zur mobilen Stromversorgung.
 
-### Pinbelegung
-
-Stellen Sie sicher, dass Ihre Hardware gemäß den folgenden Pins aus der Konfiguration verbunden ist:
-
-| Komponente | Pin-Name (Funktion) | ESP32-S3 Pin |
-| :--- | :--- | :--- |
-| **QSPI Display** | `clk_pin` | 47 |
-| | `data_pins` | [21, 48, 40, 39] |
-| | `cs_pin` | 45 |
-| **I2C Touch** | `sda` | 4 |
-| | `scl` | 8 |
-| **Backlight** | `gpio_backlight_pwm`| 1 |
-| **Beeper** | `rtttl_out` | 9 |
-| **Batterie-ADC** | `adc` | 5 |
-
 ## ⚙️ Installation & Konfiguration
 
 ### Voraussetzungen
