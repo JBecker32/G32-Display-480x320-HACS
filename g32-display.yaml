@@ -109,7 +109,7 @@ esphome:
 
   project:
     name: "g32.hacs_display480_320"
-    version: "1.1.0c"
+    version: "1.1.0d"
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -177,7 +177,6 @@ wifi:
     ssid: ${ap_ssid}
     password: ${ap_password}
 
-
 #-------------------------------------------
 # Display qspi
 #-------------------------------------------
@@ -209,6 +208,7 @@ i2c:
   sda: 4
   scl: 8
   id: touchscreen_bus
+#  scan: true
 
 touchscreen:
   - platform: axs15231
@@ -2517,9 +2517,7 @@ lvgl:
               - lvgl.widget.refresh: [zone1_label2, zone2_label2, zone3_label2, zone4_label2]
               - lvgl.widget.refresh: [sensor1_label2, sensor2_label2, sensor3_label2, sensor4_label2]
               - lvgl.widget.refresh: sensors_headline2
-
               - lvgl.widget.redraw:
-
               - if:
                   condition:
                     lambda: 'return id(page_index) == 1;'
@@ -2541,7 +2539,7 @@ sensor:
     attenuation: 12db          # input voltage range: 150mV --- 2450mV
     samples: 16                # samples taken per update interval
     filters:
-      - multiply: 1.72
+      - multiply: 1.72         # due to external voltage divider on adc input
       - sliding_window_moving_average:
           window_size: 15      # average over 15 values
       - calibrate_linear:      # linearise voltage->SOC dependency
@@ -2565,28 +2563,24 @@ sensor:
     update_interval: 4s        # new value after 4s*15(=window size) = 60s!
     on_value:
       - lambda: id(battery_soc_value) = x;
-      - lvgl.widget.refresh: battery_soc_label
-      - lvgl.widget.refresh: battery_symbol
-      - lvgl.widget.refresh: battery_bar
+      - lvgl.widget.refresh: [battery_soc_label, battery_symbol, battery_bar]
+      - lvgl.widget.refresh: [battery_soc_label2, battery_symbol2, battery_bar2]
       - lvgl.bar.update:
           id: battery_bar
           indicator:
             bg_color:  !lambda |-
               if( id(battery_soc_value) <= id(min_soc_value) ) {
                 return lv_color_hex(0xff0000); // red
-                } else {
+              } else {
                 return lv_color_hex(0x00ff00); // green
               }
-      - lvgl.widget.refresh: battery_soc_label2
-      - lvgl.widget.refresh: battery_symbol2
-      - lvgl.widget.refresh: battery_bar2
       - lvgl.bar.update:
           id: battery_bar2
           indicator:
             bg_color:  !lambda |-
               if( id(battery_soc_value) <= id(min_soc_value) ) {
                 return lv_color_hex(0xff0000); // red
-                } else {
+              } else {
                 return lv_color_hex(0xffffff); // white
               }
 
@@ -2598,9 +2592,7 @@ sensor:
     accuracy_decimals: 0
     on_value:
       - lambda: id(zone1_value) = x;
-      - lvgl.widget.refresh: zone1_label
-      - lvgl.widget.refresh: zone1_arc
-      - lvgl.widget.refresh: zone1_label2
+      - lvgl.widget.refresh: [zone1_label, zone1_arc, zone1_label2]
 
   - platform: homeassistant
     entity_id: 'sensor.${g32_nickname}_zone_2'
@@ -2610,9 +2602,7 @@ sensor:
     accuracy_decimals: 0
     on_value:
       - lambda: id(zone2_value) = x;
-      - lvgl.widget.refresh: zone2_label
-      - lvgl.widget.refresh: zone2_arc
-      - lvgl.widget.refresh: zone2_label2
+      - lvgl.widget.refresh: [zone2_label, zone2_arc, zone2_label2]
 
   - platform: homeassistant
     entity_id: 'sensor.${g32_nickname}_zone_3'
@@ -2622,9 +2612,7 @@ sensor:
     accuracy_decimals: 0
     on_value:
       - lambda: id(zone3_value) = x;
-      - lvgl.widget.refresh: zone3_label
-      - lvgl.widget.refresh: zone3_arc
-      - lvgl.widget.refresh: zone3_label2
+      - lvgl.widget.refresh: [zone3_label, zone3_arc, zone3_label2]
 
   - platform: homeassistant
     entity_id: 'sensor.${g32_nickname}_zone_4'
@@ -2634,9 +2622,7 @@ sensor:
     accuracy_decimals: 0
     on_value:
       - lambda: id(zone4_value) = x;
-      - lvgl.widget.refresh: zone4_label
-      - lvgl.widget.refresh: zone4_arc
-      - lvgl.widget.refresh: zone4_label2
+      - lvgl.widget.refresh: [zone4_label, zone4_arc, zone4_label2]
 
   - platform: homeassistant
     entity_id: 'sensor.${g32_nickname}_probe_1'
@@ -2646,14 +2632,8 @@ sensor:
     accuracy_decimals: 0
     on_value:
       - lambda: id(sensor1_value) = x;
-      - lvgl.widget.refresh: sensor1_label
-      - lvgl.widget.refresh: sensor1_arc
-      - lvgl.widget.refresh: sensor1_obj
-      - lvgl.widget.refresh: sensors_headline
-      - lvgl.widget.refresh: sensor1_label2
-      - lvgl.widget.refresh: sensor1_obj2
-      - lvgl.widget.refresh: sensors_headline2
-      - lvgl.widget.refresh: sensors_obj2
+      - lvgl.widget.refresh: [sensor1_label, sensor1_arc, sensor1_obj, sensors_headline]
+      - lvgl.widget.refresh: [sensor1_label2, sensor1_obj2, sensors_headline2, sensors_obj2]
 
   - platform: homeassistant
     entity_id: 'sensor.${g32_nickname}_probe_2'
@@ -2663,14 +2643,8 @@ sensor:
     accuracy_decimals: 0
     on_value:
       - lambda: id(sensor2_value) = x;
-      - lvgl.widget.refresh: sensor2_label
-      - lvgl.widget.refresh: sensor2_arc
-      - lvgl.widget.refresh: sensor2_obj
-      - lvgl.widget.refresh: sensors_headline
-      - lvgl.widget.refresh: sensor2_label2
-      - lvgl.widget.refresh: sensor2_obj2
-      - lvgl.widget.refresh: sensors_headline2
-      - lvgl.widget.refresh: sensors_obj2
+      - lvgl.widget.refresh: [sensor2_label, sensor2_arc, sensor2_obj, sensors_headline]
+      - lvgl.widget.refresh: [sensor2_label2, sensor2_obj2, sensors_headline2, sensors_obj2]
 
   - platform: homeassistant
     entity_id: 'sensor.${g32_nickname}_probe_3'
@@ -2680,14 +2654,8 @@ sensor:
     accuracy_decimals: 0
     on_value:
       - lambda: id(sensor3_value) = x;
-      - lvgl.widget.refresh: sensor3_label
-      - lvgl.widget.refresh: sensor3_arc
-      - lvgl.widget.refresh: sensor3_obj
-      - lvgl.widget.refresh: sensors_headline
-      - lvgl.widget.refresh: sensor3_label2
-      - lvgl.widget.refresh: sensor3_obj2
-      - lvgl.widget.refresh: sensors_headline2
-      - lvgl.widget.refresh: sensors_obj2
+      - lvgl.widget.refresh: [sensor3_label, sensor3_arc, sensor3_obj, sensors_headline]
+      - lvgl.widget.refresh: [sensor3_label2, sensor3_obj2, sensors_headline2, sensors_obj2]
 
   - platform: homeassistant
     entity_id: 'sensor.${g32_nickname}_probe_4'
@@ -2697,14 +2665,8 @@ sensor:
     accuracy_decimals: 0
     on_value:
       - lambda: id(sensor4_value) = x;
-      - lvgl.widget.refresh: sensor4_label
-      - lvgl.widget.refresh: sensor4_arc
-      - lvgl.widget.refresh: sensor4_obj
-      - lvgl.widget.refresh: sensors_headline
-      - lvgl.widget.refresh: sensor4_label2
-      - lvgl.widget.refresh: sensor4_obj2
-      - lvgl.widget.refresh: sensors_headline2
-      - lvgl.widget.refresh: sensors_obj2
+      - lvgl.widget.refresh: [sensor4_label, sensor4_arc, sensor4_obj, sensors_headline]
+      - lvgl.widget.refresh: [sensor4_label2, sensor4_obj2, sensors_headline2, sensors_obj2]
 
   - platform: homeassistant
     entity_id: 'sensor.${g32_nickname}_gas_weight'
@@ -2714,14 +2676,7 @@ sensor:
     accuracy_decimals: 1
     on_value:
       - lvgl.label.update:
-          id: gas_weight_label
-          text: !lambda |-
-            if(x >= 11000) {return ("11000 g");
-            } else {
-              return (to_string(static_cast<int>(x)) + " g").c_str();
-            }
-      - lvgl.label.update:
-          id: gas_weight_label2
+          id: [gas_weight_label, gas_weight_label2]
           text: !lambda |-
             if(x >= 11000) {return ("11000 g");
             } else {
@@ -2736,28 +2691,14 @@ sensor:
     accuracy_decimals: 0
     on_value:
       - lvgl.label.update:
-          id: gas_percent_label
-          text: !lambda |-
-            if(x > 100) {return ("---");
-            } else {
-              return (to_string(static_cast<int>(x)) + " %").c_str();
-            }
-      - lvgl.label.update:
-          id: gas_percent_label2
+          id: [gas_percent_label, gas_percent_label2]
           text: !lambda |-
             if(x > 100) {return ("---");
             } else {
               return (to_string(static_cast<int>(x)) + " %").c_str();
             }
       - lvgl.bar.update:
-          id: gas_percent_bar
-          value: !lambda |-
-            if(x > 100) {return (100);
-            } else {
-              return (x);
-            }
-      - lvgl.bar.update:
-          id: gas_percent_bar2
+          id: [gas_percent_bar, gas_percent_bar2]
           value: !lambda |-
             if(x > 100) {return (100);
             } else {
@@ -2774,7 +2715,7 @@ binary_sensor:
     on_state:
       then:
       - lvgl.bar.update:
-          id: gas_percent_bar
+          id: [gas_percent_bar, gas_percent_bar2]
           indicator:
             bg_color: !lambda |-
               if(x) {
@@ -2782,20 +2723,8 @@ binary_sensor:
               } else {
                 return lv_color_hex(${Gas_Bar_Color});
               }
-      - lvgl.bar.update:
-          id: gas_percent_bar2
-          indicator:
-            bg_color: !lambda |-
-              if(x) {
-                return lv_color_hex(${Gas_Bar_Low_Color2});
-              } else {
-                return lv_color_hex(${Gas_Bar_Color2});
-              }
       - lvgl.label.update:
-          id: gas_warning_label
-          hidden: !lambda return(!x);
-      - lvgl.label.update:
-          id: gas_warning_label2
+          id: [gas_warning_label, gas_warning_label2]
           hidden: !lambda return(!x);
 
   - platform: homeassistant
@@ -2807,10 +2736,7 @@ binary_sensor:
     on_state:
       then:
       - lvgl.label.update:
-          id: firebox_open_label
-          hidden: !lambda return(!x);
-      - lvgl.label.update:
-          id: firebox_open_label2
+          id: [firebox_open_label, firebox_open_label2]
           hidden: !lambda return(!x);
 
   - platform: homeassistant
@@ -2822,35 +2748,26 @@ binary_sensor:
     on_state:
       then:
       - lvgl.label.update:
-          id: light_on_label
-          hidden: !lambda return(!x);
-      - lvgl.label.update:
-          id: light_on_label2
-          hidden: !lambda return(!x);
+          id: [light_on_label, light_on_label2]
+          hidden: !lambda |-
+            if(id(g32_firebox_open).state == 1) {
+              return(!x);
+            } else {
+              return 1;
+            }
 
 script:
   - id: time_update
     then:
       - lvgl.label.update:
-          id: display_time
+          id: [display_time, display_time2]
           text: !lambda |-
             static char time_buf[16];
             auto now = id(ha_time).now();
             snprintf(time_buf, sizeof(time_buf), "%02d:%02d:%02d", now.hour, now.minute, now.second);
             return time_buf;
       - lvgl.label.update:
-          id: display_time2
-          text: !lambda |-
-            static char time_buf[16];
-            auto now = id(ha_time).now();
-            snprintf(time_buf, sizeof(time_buf), "%02d:%02d:%02d", now.hour, now.minute, now.second);
-            return time_buf;
-      - lvgl.label.update:
-          id: display_time
-          hidden: !lambda |-
-            return (!id(show_time));
-      - lvgl.label.update:
-          id: display_time2
+          id: [display_time, display_time2]
           hidden: !lambda |-
             return (!id(show_time));
 
