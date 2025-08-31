@@ -4,8 +4,17 @@ Dieses ESPHome-Projekt verwandelt ein JC3248W535C Touchscreen-Display in einen h
 
 Die Benutzeroberfläche ist in zwei Hauptansichten unterteilt, zwischen denen durch Wischen (Swipen) gewechselt werden kann:
 1.  **Arc-Ansicht:** Eine farbenfrohe, grafische Darstellung der Temperaturen mit kreisförmigen Bögen.
-2.  **Zahlen-Ansicht:** Eine schlichte, zahlenbasierte Ansicht, die sich auf die wichtigsten Werte konzentriert.
+![PXL_20250831_100654796 RAW-01 MP COVER](https://github.com/user-attachments/assets/9ac30cfc-e850-4c15-8dfb-55084be17deb)
 
+
+2.  **Zahlen-Ansicht:** Eine schlichte, zahlenbasierte Ansicht, die sich auf die wichtigsten Werte konzentriert.
+![PXL_20250831_100641609 RAW-01 MP COVER](https://github.com/user-attachments/assets/cf56bf26-64fc-4241-9dc1-1dac0125bc5f)
+
+* Hier sind für die Zonen 2 und 3 Temperaturlimits von 300°C gesetzt. 
+* Der Sensor 1 hat ein Temperaturlimit von 20°C und die aktuelle Temperatur von 29°C überschreitet das Limit, daher rot.
+* Gas ist unter dem eingestellten Limit, daher in der Statuszeile das rote 'Ausrufungszeichen' und der Balken ist rot (ansonsten grün).
+* Der grüne 'Pfeil nach oben' in der Statuszeile zeigt eine offene Haube, der gelbe Blitz eine aktive Innebeleuchtung.
+* Daneben das grüne WIFI Symbol für die Verbindung zu Home Assistant und das Symbol für den zu 51% geladenen Akku.
 
 ## ✨ Features
 
