@@ -1,7 +1,3 @@
-Absolut! Hier ist ein umfassender README.md-Entwurf, der auf der von Ihnen bereitgestellten YAML-Datei basiert. Er ist für die Verwendung auf GitHub strukturiert und enthält Erklärungen zu Konfiguration, Hardware und Funktionen.
-
----
-
 # ESPHome G32 Grill Monitor Display
 
 Dieses ESPHome-Projekt verwandelt ein JC3248W535C Touchscreen-Display in einen hochentwickelten Monitor für Ihren Otto Wilde G32 Grill. Es verbindet sich direkt über Bluetooth (BLE) mit dem Grill, um Echtzeitdaten abzurufen und bietet eine reichhaltige, über LVGL erstellte Benutzeroberfläche zur Visualisierung aller wichtigen Grillinformationen.
