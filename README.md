@@ -24,7 +24,7 @@ Die Benutzeroberfläche ist in zwei Hauptansichten unterteilt, zwischen denen du
 Dieses Projekt ist für eine bestimmte Kombination aus Mikrocontroller und Display konzipiert.
 
 * **Display:** Ein **JC3248W535C 480x320 Pixel** LCD-Display 
-* **Beeper/Lautsprecher:** Ein kleiner passiver Piezo Beeper zur Ausgabe von Alarmtönen.
+* **(Optional) Beeper/Lautsprecher:** Ein kleiner passiver Piezo Beeper zur Ausgabe von Alarmtönen.
 * **(Optional) Akku:** Ein LiPo/Li-Ion-Akku zur mobilen Stromversorgung.
 
 ### Pinbelegung
