@@ -4,7 +4,7 @@ Absolut! Hier ist ein umfassender README.md-Entwurf, der auf der von Ihnen berei
 
 # ESPHome G32 Grill Monitor Display
 
-Dieses ESPHome-Projekt verwandelt ein ESP32-S3-Touchscreen-Display in einen hochentwickelten Monitor für Ihren Otto Wilde G32 Grill. Es verbindet sich direkt über Bluetooth (BLE) mit dem Grill, um Echtzeitdaten abzurufen und bietet eine reichhaltige, über LVGL erstellte Benutzeroberfläche zur Visualisierung aller wichtigen Grillinformationen.
+Dieses ESPHome-Projekt verwandelt ein JC3248W535C Touchscreen-Display in einen hochentwickelten Monitor für Ihren Otto Wilde G32 Grill. Es verbindet sich direkt über Bluetooth (BLE) mit dem Grill, um Echtzeitdaten abzurufen und bietet eine reichhaltige, über LVGL erstellte Benutzeroberfläche zur Visualisierung aller wichtigen Grillinformationen.
 
 Die Benutzeroberfläche ist in zwei Hauptansichten unterteilt, zwischen denen durch Wischen (Swipen) gewechselt werden kann:
 1.  **Arc-Ansicht:** Eine farbenfrohe, grafische Darstellung der Temperaturen mit kreisförmigen Bögen.
@@ -27,11 +27,9 @@ Die Benutzeroberfläche ist in zwei Hauptansichten unterteilt, zwischen denen du
 
 Dieses Projekt ist für eine bestimmte Kombination aus Mikrocontroller und Display konzipiert.
 
-* **Mikrocontroller:** Ein **ESP32-S3** Board (z.B. ESP32-S3-DevKitC-1). Das Projekt nutzt PSRAM, stellen Sie also sicher, dass Ihr Board damit ausgestattet ist.
-* **Display:** Ein **480x320 Pixel** LCD-Display mit einem **AXS15231** Controller und einer **QSPI**-Schnittstelle.
-* **Touchscreen:** Ein kapazitiver Touchscreen-Controller, der über **I2C** angebunden wird (z.B. GT911, kompatibel mit dem AXS15231).
-* **Beeper/Lautsprecher:** Ein kleiner Lautsprecher zur Ausgabe von Alarmtönen.
-* **(Optional) Akku:** Ein LiPo/Li-Ion-Akku zur mobilen Stromversorgung, dessen Spannung über einen Spannungsteiler an einen ADC-Pin geführt wird.
+* **Display:** Ein **JC3248W535C 480x320 Pixel** LCD-Display 
+* **Beeper/Lautsprecher:** Ein kleiner passiver Piezo Beeper zur Ausgabe von Alarmtönen.
+* **(Optional) Akku:** Ein LiPo/Li-Ion-Akku zur mobilen Stromversorgung.
 
 ### Pinbelegung
 
@@ -65,7 +63,7 @@ Stellen Sie sicher, dass Ihre Hardware gemäß den folgenden Pins aus der Konfig
     * Öffnen Sie die Datei und passen Sie den oberen `substitutions`-Abschnitt an Ihre Bedürfnisse an. Dies ist der einzige Bereich, den Sie bearbeiten müssen.
 
 3.  **Firmware kompilieren und hochladen:**
-    * **Erstes Flashen:** Verbinden Sie Ihr ESP32-S3-Board über USB mit dem Computer, auf dem ESPHome läuft. Klicken Sie im ESPHome-Dashboard auf "Install" und wählen Sie die USB-Option.
+    * **Erstes Flashen:** Verbinden Sie Ihr Display über USB mit dem Computer, auf dem ESPHome läuft. Klicken Sie im ESPHome-Dashboard auf "Install" und wählen Sie die USB-Option.
     * **Zukünftige Updates:** Sobald das Gerät im Netzwerk ist, können Sie Updates drahtlos (OTA) durchführen, indem Sie auf "Install" und "Wirelessly" klicken.
 
 ### Benutzerkonfiguration (`substitutions`)
