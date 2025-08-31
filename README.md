@@ -31,7 +31,8 @@ Dieses Projekt ist für eine bestimmte Kombination aus Mikrocontroller und Displ
 
 ### Voraussetzungen
 1. Eine laufende **Home Assistant** Instanz.
-2. **ESPHome** als Add-on in Home Assistant oder als eigenständige Installation.
+2. HACS Integration für G32 von zaubii 
+3. **ESPHome** als Add-on in Home Assistant oder als eigenständige Installation.
 
 ### Installationsschritte
 
@@ -40,7 +41,7 @@ Dieses Projekt ist für eine bestimmte Kombination aus Mikrocontroller und Displ
     * Klicken Sie auf "+ NEW DEVICE" und folgen Sie den Anweisungen. Dies ist notwendig, um einen `api_encryption_key` und ein `ota_password` zu generieren. Notieren Sie sich diese Werte.
 
 2.  **YAML-Datei konfigurieren:**
-    * Laden Sie die Datei `G32_JC3248W535_ESPHome_V110d_both_BT.YAML` herunter und kopieren Sie sie in Ihr `/esphome`-Verzeichnis.
+    * Laden Sie die Datei `g32-display.yaml` herunter und kopieren Sie sie in Ihr `/esphome`-Verzeichnis.
     * Öffnen Sie die Datei und passen Sie den oberen `substitutions`-Abschnitt an Ihre Bedürfnisse an. Dies ist der einzige Bereich, den Sie bearbeiten müssen.
 
 3.  **Firmware kompilieren und hochladen:**
@@ -54,7 +55,7 @@ Passen Sie die folgenden Variablen in der YAML-Datei an:
 | Variable | Beispielwert | Beschreibung |
 | :--- | :--- | :--- |
 | `name` | `g32-display-bt` | Der Name Ihres Geräts, wie er in ESPHome und Home Assistant angezeigt wird. Keine Leer- oder Sonderzeichen. |
-| `g32_mac_address` | `94:E6:86:0A:27:52`| **WICHTIG:** Die Bluetooth-MAC-Adresse Ihres G32 Grills. (Siehe Hinweis unten) |
+| `g32_mac_address` | `94:E6:86:xx:yy:zz`| **WICHTIG:** Die Bluetooth-MAC-Adresse Ihres G32 Grills. (Siehe Hinweis unten) |
 | `wifi_ssid` | `!secret wifi_ssid` | Der Name (SSID) Ihres WLAN-Netzwerks. |
 | `wifi_password` | `!secret wifi_password` | Das Passwort für Ihr WLAN-Netzwerk. |
 | `api_encryption_key` | `"E1f...U6k="` | Der Verschlüsselungsschlüssel aus dem in Schritt 1 erstellten ESPHome-Gerät. |
