@@ -1,6 +1,6 @@
 # ESPHome G32 Grill Monitor Display
 
-Dieses ESPHome-Projekt verwandelt ein JC3248W535C Touchscreen-Display in einen hochentwickelten Monitor für Ihren Otto Wilde G32 Grill. Es verbindet sich über eine HACS-Integration in Home Assistant mit dem Grill, um Echtzeitdaten abzurufen und bietet eine reichhaltige, über LVGL erstellte Benutzeroberfläche zur Visualisierung aller wichtigen Grillinformationen.
+Dieses ESPHome-Projekt verwandelt ein JC3248W535C Touchscreen-Display in einen hochentwickelten Monitor für Ihren Otto Wilde G32 Grill. Es verbindet sich über eine [HACS-Integration](https://github.com/zaubii/owg-g32-ha-integration) in Home Assistant mit dem Grill, um Echtzeitdaten abzurufen und bietet eine reichhaltige, über LVGL erstellte Benutzeroberfläche zur Visualisierung aller wichtigen Grillinformationen.
 
 Die Benutzeroberfläche ist in zwei Hauptansichten unterteilt, zwischen denen durch Wischen (Swipen) gewechselt werden kann:
 1.  **Arc-Ansicht:** Eine farbenfrohe, grafische Darstellung der Temperaturen mit kreisförmigen Bögen.
