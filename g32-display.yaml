@@ -40,7 +40,7 @@ substitutions:
   ap_ssid: "G32 Display Fallback Hotspot"
   ap_password: "4Lytxfy25DNh"
 
-# benutzerdefinierbare Displayelemente
+# benutzerdefinierbare Displayelemente (nur noch für die Limits-Page!)
 # Texte festlegen für Zonen und Sensoren (max. 8 Zeichen):
   Zone_Text:   "Zone "     # ergibt 'Zone 1', 'Zone 2' usw.
   Sensor_Text: "Sensor "   # ergibt 'Sensor 1', 'Sensor 2' usw.
@@ -85,14 +85,20 @@ substitutions:
 # Zeitinterval für Lautsprecher (Beeper) Alarmmeldungen festlegen Default: 5s
   Beeper_interval: "5s"
 
-# Uhrzeit 11:32 oben in der Mitte der Statuszeile anzeigen? true = Ja, false = Nein
+# Uhrzeit 11:32:45 oben in der Mitte der Statuszeile anzeigen? true = Ja, false = Nein
   Show_Time: 'true'
+
+# Timer ausblenden? true = Timer ausblenden, false = Timer anzeigen
+  Disable_Timer: 'false'
 
 # welche Anzeigen sollen aktiv sein, die bunten 'Arcs' und/oder die grauen 'Zahlen'?
 # Wenn beide aktiv, dann Wechsel zwischen den Anzeigen durch 'Swipen' nach rechts oder links
 # anzeigen: 'true', nicht anzeigen: 'false' (mindestens eins sollte 'true' sein!)
   Show_Arcs_Page: 'true'
   Show_Numbers_Page: 'true'
+
+# Orientierung des Displays: todo ???
+
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -109,7 +115,7 @@ esphome:
 
   project:
     name: "g32.hacs_display480_320"
-    version: "1.1.0e"
+    version: "1.3.0"
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -198,7 +204,8 @@ display:
     cs_pin:
       number: 45
       ignore_strapping_warning: true
-    rotation: 90 # 90 for landscape
+    rotation: 270 # 90 for landscape
+#    rotation: 90 # 90 for landscape
     auto_clear_enabled: false
 
 #-------------------------------------------
@@ -216,14 +223,24 @@ touchscreen:
     display: my_display
     i2c_id: touchscreen_bus
     calibration:
-      x_min: 14
-      x_max: 461
-      y_min: 12
-      y_max: 310
+      x_min: 1
+      x_max: 480
+      y_min: 1
+      y_max: 320
+#    calibration:
+#      x_min: 14
+#      x_max: 461
+#      y_min: 12
+#      y_max: 310
     transform:
       swap_xy: true
-      mirror_x: false
-      mirror_y: true
+# for 270° display orientation
+      mirror_x: true
+      mirror_y: false
+# for 90° display orientation
+#      mirror_x: false
+#      mirror_y: true
+# for test purposes, touch coordinates can be logged
 #    on_touch:
 #      - lambda: |-
 #          ESP_LOGI("cal", "x=%d, y=%d, x_raw=%d, y_raw=%0d",
@@ -298,6 +315,9 @@ interval:
                  || ((id(sensor4_limit_value) > 0) && (id(sensor4_value) >= id(sensor4_limit_value))) ) {
             id(my_rtttl).play("siren2:d=8,o=5,b=150:e,d,e,d,e,d,e,d");
           }
+          else if( id(timer_alarm) == true ) {
+            id(my_rtttl).play("pling3:d=16,o=6,b=140:e6,32p,e6,32p,e6,32p,e6");
+          }
 
 #-------------------------------------------
 # Global varaibles
@@ -329,7 +349,7 @@ globals:
     type: bool
     initial_value: ${Hide_Battery_Symbol}
 
-  - id: show_time           # enables/disables time (HOUR:MINUT) display
+  - id: show_time           # enables/disables time (HOUR:MINUT:SECONDS) display
     type: bool
     initial_value: ${Show_Time}
 
@@ -406,6 +426,32 @@ globals:
     type: int
     initial_value: '0'
 
+  - id: timer_h             # timer hours
+    type: int
+    initial_value: '0'
+  - id: timer_m             # timer minutes
+    type: int
+    initial_value: '0'
+  - id: timer_s             # timer seconds
+    type: int
+    initial_value: '0'
+  - id: timer_active        # timer active (=running)
+    type: bool
+    initial_value: 'false'
+  - id: timer_alarm         # timer alarm active
+    type: bool
+    initial_value: 'false'
+
+  - id: helper_h             # timer hours
+    type: int
+    initial_value: '0'
+  - id: helper_m             # timer minutes
+    type: int
+    initial_value: '0'
+  - id: helper_s             # timer seconds
+    type: int
+    initial_value: '0'
+
 
 #-------------------------------------------
 # for screen timeout
@@ -464,6 +510,7 @@ lvgl:
       radius: 5
       indicator:
         radius: 5
+        arc_color: red
     arc:
       radius: 5
       arc_color: 0x333333
@@ -645,7 +692,7 @@ lvgl:
                     - lvgl.label.update:
                         id: sensor_limit_headline_label
                         text: !lambda |-
-                          return "${Zone_Text}1 Temperaturlimit";
+                          return "${Zone_Text}1 Temperaturlimit:";
                     - lvgl.label.update:
                         id: sensor_limit_label
                         text: !lambda |-
@@ -714,7 +761,7 @@ lvgl:
                     - lvgl.label.update:
                         id: sensor_limit_headline_label
                         text: !lambda |-
-                          return "${Zone_Text}2 Temperaturlimit";
+                          return "${Zone_Text}2 Temperaturlimit:";
                     - lvgl.label.update:
                         id: sensor_limit_label
                         text: !lambda |-
@@ -783,7 +830,7 @@ lvgl:
                     - lvgl.label.update:
                         id: sensor_limit_headline_label
                         text: !lambda |-
-                          return "${Zone_Text}3 Temperaturlimit";
+                          return "${Zone_Text}3 Temperaturlimit:";
                     - lvgl.label.update:
                         id: sensor_limit_label
                         text: !lambda |-
@@ -852,7 +899,7 @@ lvgl:
                     - lvgl.label.update:
                         id: sensor_limit_headline_label
                         text: !lambda |-
-                          return "${Zone_Text}4 Temperaturlimit";
+                          return "${Zone_Text}4 Temperaturlimit:";
                     - lvgl.label.update:
                         id: sensor_limit_label
                         text: !lambda |-
@@ -886,11 +933,27 @@ lvgl:
             id: sensors_headline
             x: 12
             y: 140
-            width: 460
+            width: 240
             text_font: MONTSERRAT_20
             text_align: left
             text: "Temperatursensoren"
             hidden: !lambda return (id(active_sensors) == 0);
+
+        # timer
+        - label:
+            id: timer_value
+            x: 380
+            y: 140
+            width: 100
+            text_font: MONTSERRAT_20
+            text_align: left
+            text: "--:--:--"
+            hidden: ${Disable_Timer}
+            clickable: 'true'
+            on_press:
+              - lambda: |-
+                  id(page_index) = 1;
+              - lvgl.page.show: timer_page
 
         # sensor 1 object with Headline, Labels and Arc
         - obj:
@@ -941,7 +1004,7 @@ lvgl:
                     - lvgl.label.update:
                         id: sensor_limit_headline_label
                         text: !lambda |-
-                          return "${Sensor_Text}1 Temperaturlimit";
+                          return "${Sensor_Text}1 Temperaturlimit:";
                     - lvgl.label.update:
                         id: sensor_limit_label
                         text: !lambda |-
@@ -1018,7 +1081,7 @@ lvgl:
                     - lvgl.label.update:
                         id: sensor_limit_headline_label
                         text: !lambda |-
-                          return "${Sensor_Text}2 Temperaturlimit";
+                          return "${Sensor_Text}2 Temperaturlimit:";
                     - lvgl.label.update:
                         id: sensor_limit_label
                         text: !lambda |-
@@ -1095,7 +1158,7 @@ lvgl:
                     - lvgl.label.update:
                         id: sensor_limit_headline_label
                         text: !lambda |-
-                          return "${Sensor_Text}3 Temperaturlimit";
+                          return "${Sensor_Text}3 Temperaturlimit:";
                     - lvgl.label.update:
                         id: sensor_limit_label
                         text: !lambda |-
@@ -1172,7 +1235,7 @@ lvgl:
                     - lvgl.label.update:
                         id: sensor_limit_headline_label
                         text: !lambda |-
-                          return "${Sensor_Text}4 Temperaturlimit";
+                          return "${Sensor_Text}4 Temperaturlimit:";
                     - lvgl.label.update:
                         id: sensor_limit_label
                         text: !lambda |-
@@ -1244,7 +1307,7 @@ lvgl:
         - obj:
             id: battery_symbol_obj
             x: 420
-            y: 2
+            y: 0
             width: 60
             height: 24
             bg_color: 0
@@ -1324,7 +1387,7 @@ lvgl:
         - label:
             id: wifi_connect_label
             x: 390
-            y: 4
+            y: 0
             text_font: MONTSERRAT_18
             text_color: 0x00ff00
             text_align: CENTER
@@ -1336,7 +1399,7 @@ lvgl:
         - label:
             id: light_on_label
             x: 360
-            y: 4
+            y: 0
             text_font: MONTSERRAT_18
             text_color: 0xffff00
             text_align: CENTER
@@ -1348,7 +1411,7 @@ lvgl:
         - label:
             id: firebox_open_label
             x: 330
-            y: 4
+            y: 0
             text_font: MONTSERRAT_18
             text_color: 0x00ff00
             text_align: CENTER
@@ -1360,7 +1423,7 @@ lvgl:
         - label:
             id: gas_warning_label
             x: 300
-            y: 4
+            y: 0
             text_font: MONTSERRAT_18
             text_color: 0xff0000
             text_align: CENTER
@@ -1371,11 +1434,11 @@ lvgl:
           # time string hours:minutes
         - label:
             id: display_time
-            x: 190
-            y: 4
+            x: 200
+            y: 0
             text_font: MONTSERRAT_20
             text_color: 0xffffff
-            text_align: CENTER
+            text_align: LEFT
             width: 100
             text: "00:00:00"
             hidden: true
@@ -1462,7 +1525,7 @@ lvgl:
                     - lvgl.label.update:
                         id: sensor_limit_headline_label
                         text: !lambda |-
-                          return "${Zone_Text}1 Temperaturlimit";
+                          return "${Zone_Text}1 Temperaturlimit:";
                     - lvgl.label.update:
                         id: sensor_limit_label
                         text: !lambda |-
@@ -1534,7 +1597,7 @@ lvgl:
                     - lvgl.label.update:
                         id: sensor_limit_headline_label
                         text: !lambda |-
-                          return "${Zone_Text}2 Temperaturlimit";
+                          return "${Zone_Text}2 Temperaturlimit:";
                     - lvgl.label.update:
                         id: sensor_limit_label
                         text: !lambda |-
@@ -1606,7 +1669,7 @@ lvgl:
                     - lvgl.label.update:
                         id: sensor_limit_headline_label
                         text: !lambda |-
-                          return "${Zone_Text}3 Temperaturlimit";
+                          return "${Zone_Text}3 Temperaturlimit:";
                     - lvgl.label.update:
                         id: sensor_limit_label
                         text: !lambda |-
@@ -1678,7 +1741,7 @@ lvgl:
                     - lvgl.label.update:
                         id: sensor_limit_headline_label
                         text: !lambda |-
-                          return "${Zone_Text}4 Temperaturlimit";
+                          return "${Zone_Text}4 Temperaturlimit:";
                     - lvgl.label.update:
                         id: sensor_limit_label
                         text: !lambda |-
@@ -1705,11 +1768,27 @@ lvgl:
             id: sensors_headline2
             x: 12
             y: 140
-            width: 460
+            width: 240
             text_font: MONTSERRAT_20
             text_align: left
             text: "Temperatursensoren"
             hidden: !lambda return (id(active_sensors) == 0);
+
+        # timer
+        - label:
+            id: timer_value2
+            x: 380
+            y: 140
+            width: 100
+            text_font: MONTSERRAT_20
+            text_align: left
+            text: "--:--:--"
+            hidden: ${Disable_Timer}
+            clickable: 'true'
+            on_press:
+              - lambda: |-
+                  id(page_index) = 2;
+              - lvgl.page.show: timer_page
 
         # grey rectangle which combines the sensor objects
         - obj:
@@ -1788,7 +1867,7 @@ lvgl:
                     - lvgl.label.update:
                         id: sensor_limit_headline_label
                         text: !lambda |-
-                          return "${Sensor_Text}1 Temperaturlimit";
+                          return "${Sensor_Text}1 Temperaturlimit:";
                     - lvgl.label.update:
                         id: sensor_limit_label
                         text: !lambda |-
@@ -1869,7 +1948,7 @@ lvgl:
                     - lvgl.label.update:
                         id: sensor_limit_headline_label
                         text: !lambda |-
-                          return "${Sensor_Text}2 Temperaturlimit";
+                          return "${Sensor_Text}2 Temperaturlimit:";
                     - lvgl.label.update:
                         id: sensor_limit_label
                         text: !lambda |-
@@ -1950,7 +2029,7 @@ lvgl:
                     - lvgl.label.update:
                         id: sensor_limit_headline_label
                         text: !lambda |-
-                          return "${Sensor_Text}3 Temperaturlimit";
+                          return "${Sensor_Text}3 Temperaturlimit:";
                     - lvgl.label.update:
                         id: sensor_limit_label
                         text: !lambda |-
@@ -2031,7 +2110,7 @@ lvgl:
                     - lvgl.label.update:
                         id: sensor_limit_headline_label
                         text: !lambda |-
-                          return "${Sensor_Text}4 Temperaturlimit";
+                          return "${Sensor_Text}4 Temperaturlimit:";
                     - lvgl.label.update:
                         id: sensor_limit_label
                         text: !lambda |-
@@ -2052,6 +2131,7 @@ lvgl:
                     } else {
                       return ("---");
                     }
+
 
         # gas object with gas values in % and g
         - obj:
@@ -2222,15 +2302,132 @@ lvgl:
         # time string hours:minutes
         - label:
             id: display_time2
-            x: 190
-            y: 4
+            x: 200
+            y: 0
             text_font: MONTSERRAT_20
             text_color: 0xffffff
-            text_align: CENTER
+            text_align: LEFT
             width: 100
             text: "00:00:00"
             hidden: true
 
+
+  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+    - id: timer_page
+      skip: true
+      pad_all: 0
+      widgets:
+        - label:
+            id: timer_headline_label
+            x: 0
+            y: 10
+            width: 440
+            text_font: MONTSERRAT_20
+            text_align: LEFT
+            text: "Timer:"
+
+        - roller:
+            id: timer_roller_h
+            x: 120
+            y: 100
+            width: 50
+            text_font: MONTSERRAT_20
+            options: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
+            on_value:
+              - lambda: |-
+                  id(helper_h) = x;
+        - label:
+            x: 170
+            y: 154
+            width: 30
+            text_font: MONTSERRAT_20
+            text_align: CENTER
+            text: "H"
+
+        - roller:
+            id: timer_roller_m
+            x: 200
+            y: 100
+            width: 50
+            text_font: MONTSERRAT_20
+            options: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59]
+            on_value:
+              - lambda: |-
+                  id(helper_m) = x;
+        - label:
+            x: 250
+            y: 154
+            width: 30
+            text_font: MONTSERRAT_20
+            text_align: CENTER
+            text: "M"
+
+        - roller:
+            id: timer_roller_s
+            x: 280
+            y: 100
+            width: 50
+            text_font: MONTSERRAT_20
+            options: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59]
+            on_value:
+              - lambda: |-
+                  id(helper_s) = x;
+        - label:
+            x: 330
+            y: 154
+            width: 30
+            text_font: MONTSERRAT_20
+            text_align: CENTER
+            text: "S"
+
+        - button:
+            x: 185
+            y: 260
+            width: 80
+            height: 40
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: MONTSERRAT_26
+                  text: "CLR"
+            on_click:
+              then:
+                - lvgl.roller.update:
+                    id: [timer_roller_h, timer_roller_m, timer_roller_s]
+                    selected_index: 0
+                - lambda: |-
+                    id(helper_h) = 0;
+                    id(helper_m) = 0;
+                    id(helper_s) = 0;
+                    id(timer_alarm) = false;
+                    id(timer_active) = false;
+
+        - button:
+            x: 370
+            y: 260
+            width: 80
+            height: 40
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: MONTSERRAT_26
+                  text: "OK"
+            on_click:
+              - lambda: |-
+                  id(timer_h) = id(helper_h);
+                  id(timer_m) = id(helper_m);
+                  id(timer_s) = id(helper_s);
+                  if( id(timer_h) > 0 || id(timer_m) > 0 || id(timer_s) > 0 ){
+                    id(timer_active) = true;
+                    id(timer_alarm) = false;
+                  }
+              - if:
+                  condition:
+                    lambda: 'return id(page_index) == 1;'
+                  then:
+                    - lvgl.page.show: arcs_page
+                  else:
+                    - lvgl.page.show: numbers_page
 
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
     - id: sensor_limits_page
@@ -2278,6 +2475,7 @@ lvgl:
                     } else {
                       return (to_string(static_cast<int>(id(sensor_max_value)))+"°C").c_str();
                     }
+
         - button:
             x: 30
             y: 90
@@ -2300,6 +2498,7 @@ lvgl:
               - lvgl.slider.update:
                   id: sensor_limit_slider
                   value: !lambda return id(sensor_limit_value);
+
         - button:
             x: 30
             y: 140
@@ -2322,6 +2521,7 @@ lvgl:
               - lvgl.slider.update:
                   id: sensor_limit_slider
                   value: !lambda return id(sensor_limit_value);
+
         - button:
             x: 30
             y: 190
@@ -2344,6 +2544,7 @@ lvgl:
               - lvgl.slider.update:
                   id: sensor_limit_slider
                   value: !lambda return id(sensor_limit_value);
+
         - button:
             x: 390
             y: 90
@@ -2366,6 +2567,7 @@ lvgl:
               - lvgl.slider.update:
                   id: sensor_limit_slider
                   value: !lambda return id(sensor_limit_value);
+
         - button:
             x: 390
             y: 140
@@ -2388,6 +2590,7 @@ lvgl:
               - lvgl.slider.update:
                   id: sensor_limit_slider
                   value: !lambda return id(sensor_limit_value);
+
         - button:
             x: 390
             y: 190
@@ -2410,6 +2613,25 @@ lvgl:
               - lvgl.slider.update:
                   id: sensor_limit_slider
                   value: !lambda return id(sensor_limit_value);
+
+        - button:
+            x: 200
+            y: 260
+            width: 80
+            height: 40
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: MONTSERRAT_26
+                  text: "CLR"
+            on_click:
+              then:
+              - lambda: |-
+                  id(sensor_limit_value) = 0;
+              - lvgl.slider.update:
+                  id: sensor_limit_slider
+                  value: !lambda return id(sensor_limit_value);
+
         - button:
             x: 370
             y: 260
@@ -2665,13 +2887,22 @@ binary_sensor:
     on_state:
       then:
       - lvgl.bar.update:
-          id: [gas_percent_bar, gas_percent_bar2]
+          id: gas_percent_bar
           indicator:
             bg_color: !lambda |-
               if(x) {
                 return lv_color_hex(${Gas_Bar_Low_Color});
               } else {
                 return lv_color_hex(${Gas_Bar_Color});
+              }
+      - lvgl.bar.update:
+          id: gas_percent_bar2
+          indicator:
+            bg_color: !lambda |-
+              if(x) {
+                return lv_color_hex(${Gas_Bar_Low_Color2});
+              } else {
+                return lv_color_hex(${Gas_Bar_Color2});
               }
       - lvgl.label.update:
           id: [gas_warning_label, gas_warning_label2]
@@ -2720,4 +2951,72 @@ script:
           id: [display_time, display_time2]
           hidden: !lambda |-
             return (!id(show_time));
+      - lvgl.label.update:
+          id: timer_value
+          text: !lambda |-
+            if( id(timer_active) == true ) {
+              if( id(timer_s) > 0 )
+              {
+                id(timer_s) -= 1;
+              }
+              else
+              {
+                if( id(timer_m) > 0 )
+                {
+                  id(timer_s) = 59;
+                  id(timer_m) = id(timer_m) - 1;
+                }
+                else
+                {
+                  if( id(timer_h) > 0 )
+                  {
+                    id(timer_m) = 59;
+                    id(timer_h) = id(timer_h) - 1;
+                  }
+                  else
+                  {
+                    if( id(timer_alarm) == false ) {
+                      id(timer_alarm) = true;
+                      id(my_rtttl).play("pling3:d=16,o=6,b=140:e6,32p,e6,32p,e6,32p,e6");                    }
+                  }
+                }
+              }
+              if( id(timer_alarm) == false ) {
+                static char time_buf[16];
+                snprintf(time_buf, sizeof(time_buf), "%02d:%02d:%02d", id(timer_h), id(timer_m), id(timer_s));
+                return time_buf;
+              } else {
+                return ("00:00:00");
+              }
+            } else {
+              return ("-- : -- : --");
+            }
+      - lvgl.label.update:
+          id: timer_value
+          text_color: !lambda |-
+            if( id(timer_alarm) == true ) {
+              return lv_color_hex(0xff0000);
+            } else {
+              return lv_color_hex(0xffffff);
+            }
+      - lvgl.label.update:
+          id: timer_value2
+          text: !lambda |-
+            if( id(timer_active) == true ) {
+              if( id(timer_alarm) == false ) {
+                static char time_buf[16];
+                snprintf(time_buf, sizeof(time_buf), "%02d:%02d:%02d", id(timer_h), id(timer_m), id(timer_s));
+                return time_buf;
+              } else {
+                return ("00:00:00");
+              }
+            } else {
+              return ("-- : -- : --");
+            }
+          text_color: !lambda |-
+            if( id(timer_alarm) == true ) {
+              return lv_color_hex(0xff0000);
+            } else {
+              return lv_color_hex(0xffffff);
+            }
 
