@@ -82,6 +82,7 @@ Passen Sie die folgenden Variablen in der YAML-Datei an:
 | Variable | Beispielwert | Beschreibung |
 | :--- | :--- | :--- |
 | `name` | `g32-display-bt` | Der Name Ihres Geräts, wie er in ESPHome und Home Assistant angezeigt wird. Keine Leer- oder Sonderzeichen. |
+| `g32_mac_address` | `94:E6:86:xx:yy:zz`| **WICHTIG:** Die Bluetooth-MAC-Adresse Ihres G32 Grills. (Siehe Hinweis unten) |
 | `wifi_ssid` | `!secret wifi_ssid` | Der Name (SSID) Ihres WLAN-Netzwerks. |
 | `wifi_password` | `!secret wifi_password` | Das Passwort für Ihr WLAN-Netzwerk. |
 | `api_encryption_key` | `"E1f...U6k="` | Der Verschlüsselungsschlüssel aus dem in Schritt 1 erstellten ESPHome-Gerät. |
@@ -98,14 +99,16 @@ Passen Sie die folgenden Variablen in der YAML-Datei an:
 | `Enable_Temperature_Limits`| `'true'` | Setzen Sie auf `'false'`, um die Funktion zum Setzen von Temperaturlimits zu deaktivieren. |
 | `Sensor1_Max` | `"130"` | Maximale einstellbare Temperatur für Sensor 1 (z.B. für Kerntemperatur). |
 | `Beeper_interval`| `"5s"` | Das Zeitintervall für Alarmmeldungen des Lautsprechers. |
+| `Soundeffekte`| `diverse` | Soundeffekte für die diversen Meldungen und Alarme. |
 | `Show_Time` | `'true'` | Setzen Sie auf `'true'`, um die Uhrzeit (von Home Assistant synchronisiert) anzuzeigen. |
 | `Disable_Timer` | `'false'` | Setzen Sie auf `'false'`, um einen Timer (max. 23h59m59s) zu verwenden. |
 | `Show_Arcs_Page` | `'true'` | Legt fest, ob die grafische "Arc"-Seite angezeigt werden soll. |
 | `Show_Numbers_Page`| `'true'` | Legt fest, ob die "Zahlen"-Seite angezeigt werden soll. |
-
+| `Display_Timeout`| `"0"` | Bestimmt die Zeitdauer, nach der das Display automatisch ausgeschaltet werden soll (in Sekunden). Maximalwert 3600s, 0 bedeutet kein Timeout! |
 
 ## 🕹️ Bedienung
 
 * **Seiten wechseln:** Wischen Sie auf dem Display nach links oder rechts, um zwischen der "Arc"-Ansicht und der "Zahlen"-Ansicht zu wechseln (sofern beide aktiviert sind).
 * **Temperaturlimit setzen:** Tippen Sie auf eine Temperaturanzeige (entweder in der Arc- oder der Zahlen-Ansicht). Es öffnet sich eine neue Seite, auf der Sie mit den Tasten `+` / `-` oder dem Schieberegler ein Temperaturlimit festlegen können. Bestätigen Sie mit "OK".
 * **Bildschirm aufwecken:** Wenn der Bildschirm nach der eingestellten Zeit in den Ruhezustand wechselt (Bildschirm aus), tippen Sie einfach einmal auf das Display, um ihn wieder zu aktivieren.
+* **ACHTUNG:** Der Touchscreen dieses Displays ist leider nicht sehr 'genau' und neigt zusätzlich zu 'Sprüngen'. Er hat auch einen toten Bereich zu den Rändern hin. Daher ist die Bedienung manchmal etwas 'hakelig'. Das Swipen zwischen den Fenstern macht man am Besten in dem freien Bereich zwischen den oberen Zonen und den unterenen Sensoren, also in etwa auf Linie mit dem Schriftzug "Temperatursensoren".  
